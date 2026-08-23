@@ -1,0 +1,18 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        // AGP 8.5.2: תומכת רשמית עד compileSdk 34, ומצריכה בהתאם Gradle 8.7+
+        // (מוגדר גם ב-.github/workflows/build.yml).
+        classpath 'com.android.tools.build:gradle:8.5.2'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}

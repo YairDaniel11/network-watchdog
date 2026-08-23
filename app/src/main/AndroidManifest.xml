@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- מכשיר מקשים ללא מסך מגע: חובה להצהיר שהמסך אינו חובה, אחרת
+         אנדרואיד עלול לחסום התקנה/הפעלה במכשיר כזה. -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- דרוש כדי לבדוק אם יש רישום לרשת סלולרית (מעקב רשת טלפונית).
+         מ-API 29 ואילך זו הרשאה "מסוכנת" שדורשת בקשה מפורשת בזמן ריצה -
+         ראו PermissionUtil / MainActivity. -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+
+    <!-- מאפשר לתזמן מחדש את הבדיקה החוזרת אחרי כיבוי/הדלקה של המכשיר,
+         אם מעקב כלשהו היה פעיל לפני הכיבוי - ראו BootReceiver. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- WAKE_LOCK: מוחזק לפרק זמן קצר בלבד (שניות בודדות) בכל בדיקה, כדי
+         שהבדיקה תספיק לרוץ גם אם המסך כבוי - ראו NetworkCheckReceiver.
+         משוחרר תמיד מיד בסיום, כדי לא לפגוע בסוללה. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- הרשאה "רגילה" (לא דורשת דיאלוג) - מאפשרת לבקש מהמשתמש להוציא את
+         האפליקציה מרשימת חיסכון הסוללה, כדי שהבדיקה כל 5 דקות לא תידחה
+         משמעותית ע"י Doze במכשירים חדשים (לא רלוונטי במכשיר היעד הישן). -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- מתעורר ע"י AlarmManager כל 5 דקות (ראו AlarmScheduler). אין לו
+             intent-filter (מופעל רק ע"י PendingIntent פנימי מפורש), ולכן
+             exported="false" - שום אפליקציה חיצונית לא יכולה להפעיל אותו. -->
+        <receiver
+            android:name=".NetworkCheckReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+        <!-- מתזמן מחדש את הבדיקה החוזרת אחרי אתחול המכשיר, אם מעקב כלשהו
+             היה פעיל. BOOT_COMPLETED הוא broadcast מוגן של המערכת בלבד,
+             ולכן בטוח להשאיר exported="true" (נדרש כי יש כאן intent-filter). -->
+        <receiver
+            android:name=".BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+
+</manifest>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "משתני צבע" מופשטים לערכת הנושא - כל layout מפנה אליהם דרך "?attr/שם"
+     במקום ישירות ל-@color קבוע, כדי שאותו layout יציג צבעים שונים לפי
+     ה-style שהוגדר על ה-Activity (AppTheme.Dark/AppTheme.Light) - בלי
+     AndroidX/AppCompat. הפניות "?attr/..." בתוך layout נתמכות מ-API 1,
+     ולכן בטוחות גם במכשיר היעד הישן (מינימום API 19). -->
+<resources>
+    <attr name="colorBgMain" format="color" />
+    <attr name="colorHeaderBg" format="color" />
+    <attr name="colorAccent" format="color" />
+    <attr name="colorTextPrimary" format="color" />
+    <attr name="colorTextSecondary" format="color" />
+    <attr name="colorRowBg" format="color" />
+    <attr name="colorDivider" format="color" />
+    <attr name="colorButtonText" format="color" />
+</resources>

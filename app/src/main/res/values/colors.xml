@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- אותה פלטה כמו האפליקציה הקודמת (עיצוב שטוח, רקע כהה, אקסנט טורקיז) -
+         כדי לשמור על מיתוג אחיד בין האפליקציות שלך על אותו מכשיר. -->
+    <color name="bg_dark">#FF2B2E33</color>
+    <color name="header_black">#FF000000</color>
+    <color name="accent_teal">#FF00BCD4</color>
+    <color name="text_white">#FFFFFFFF</color>
+    <color name="text_light_gray">#FFCCCCCC</color>
+    <color name="divider_gray">#FF444444</color>
+    <color name="row_gray">#FF3A3E44</color>
+
+    <color name="bg_light">#FFF4F4F6</color>
+    <color name="header_light">#FFFFFFFF</color>
+    <color name="text_dark">#FF1A1A1A</color>
+    <color name="text_gray_dark">#FF5A5A5A</color>
+    <color name="divider_light">#FFD8D8DC</color>
+    <color name="row_light">#FFE6E6EA</color>
+
+    <!-- ירוק/אדום למצבי "פעיל"/"כבוי" של כפתורי המעקב, ולסטטוס רוט. -->
+    <color name="status_green">#FF4CAF50</color>
+    <color name="status_red">#FFE53935</color>
+    <color name="toggle_off_gray">#FF5A5F66</color>
+
+    <!-- מסגרת פוקוס ירוקה על הכפתורים - חיווי ניווט ברור למכשירי מקשים/D-pad
+         (בלי מסך מגע, המשתמש עובר בין הכפתורים עם החצים ורואה איזה כפתור
+         ממוקד כרגע). -->
+    <color name="focus_green">@android:color/holo_green_light</color>
+</resources>

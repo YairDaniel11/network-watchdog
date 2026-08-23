@@ -1,0 +1,42 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace 'com.netwatch.watchdog'
+    // compileSdk תמיד חייב להיות >= targetSdk.
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.netwatch.watchdog"
+        // minSdk 19 = Android 4.4 KitKat - כדי לתמוך במכשירי מקשים ישנים.
+        minSdk 19
+
+        // targetSdk 34 (ולא 19 כמו minSdk) - זה מה שמונע את דיאלוג האזהרה
+        // "האפליקציה נבנתה לגרסה ישנה של אנדרואיד ועלולה שלא לעבוד כראוי"
+        // שאנדרואיד מציג אוטומטית (מגרסה 6 ואילך) לכל אפליקציה עם targetSdk
+        // מתחת ל-23, בלי קשר לגרסת אנדרואיד בפועל של המכשיר. minSdk הנמוך
+        // הוא זה ששומר על תמיכה במכשיר הישן - targetSdk גבוה לא פוגע בזה.
+        targetSdk 34
+
+        versionCode 1
+        versionName "1.0"
+        // versionCode/versionName כאן הם ברירת מחדל לבנייה מקומית בלבד -
+        // ב-CI (.github/workflows/build.yml) שלב נפרד מחליף אותם במספר
+        // ריצה עולה, כך שכל APK שיוצא מקבל גרסה חדשה אוטומטית.
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+// בלי AndroidX/AppCompat בכוונה - Activity רגיל + theme גולמי של הפלטפורמה.
+// זה גם ממזער תלויות להורדה מ-Maven, וגם שומר על טביעת רגל RAM מינימלית -
+// חשוב במיוחד כשהאפליקציה כוללת גם BroadcastReceiver שמתעורר כל 5 דקות
+// (ראו NetworkCheckReceiver) ולא שירות שרץ ברצף.

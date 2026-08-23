@@ -1,0 +1,96 @@
+# בונה APK דיבאג אוטומטית על כל push, ומצרף אותו כ-GitHub Release קבוע.
+# הרצה ידנית אפשרית גם מהטאב "Actions" במאגר (workflow_dispatch), בלי push.
+
+name: Build APK
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch: {}
+
+# GITHUB_TOKEN (ניתן אוטומטית ע"י GitHub לכל הרצה) צריך הרשאת כתיבה כדי
+# שנוכל ליצור Release חדש במאגר בסיום הבנייה.
+permissions:
+  contents: write
+
+jobs:
+  assembleDebug:
+    runs-on: ubuntu-latest
+
+    # תמונת Docker רשמית של Gradle - כך שאין תלות בגרסת Gradle/JDK שמותקנת
+    # (או לא) מראש על ה-runner של GitHub.
+    container:
+      image: gradle:8.7-jdk17
+
+    env:
+      ANDROID_COMPILE_SDK: "34"
+      ANDROID_BUILD_TOOLS: "34.0.0"
+      # אם ה-URL הזה יחדל לעבוד בעתיד (גוגל מדי פעם מעדכנים את מספר הגרסה
+      # בשם הקובץ), קחו קישור עדכני מתוך
+      # https://developer.android.com/studio#command-line-tools-only ועדכנו כאן.
+      ANDROID_CMDLINE_TOOLS_VERSION: "11076708"
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
+      GRADLE_USER_HOME: ${{ github.workspace }}/.gradle-cache
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # שומר בין ריצות כדי שהורדת Android SDK ותלויות Gradle לא יקרו מאפס בכל push.
+      - name: Cache Android SDK + Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.ANDROID_SDK_ROOT }}
+            ${{ env.GRADLE_USER_HOME }}
+          key: android-sdk-and-gradle-cache-${{ runner.os }}-v34
+
+      - name: Install Android SDK
+        run: |
+          apt-get update -qq && apt-get install -qq -y wget unzip > /dev/null
+          if [ ! -d "$ANDROID_SDK_ROOT/cmdline-tools/latest" ]; then
+            mkdir -p "$ANDROID_SDK_ROOT"
+            wget -q "https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_CMDLINE_TOOLS_VERSION}_latest.zip" -O /tmp/cmdline-tools.zip
+            unzip -q /tmp/cmdline-tools.zip -d /tmp/cmdline-tools-extracted
+            mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+            mv /tmp/cmdline-tools-extracted/cmdline-tools/* "$ANDROID_SDK_ROOT/cmdline-tools/latest/"
+          fi
+          export PATH="$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools"
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          sdkmanager "platform-tools" "platforms;android-${ANDROID_COMPILE_SDK}" "build-tools;${ANDROID_BUILD_TOOLS}" > /dev/null
+
+      # עדכון גרסה אוטומטי - versionCode/versionName מתעדכנים למספר ההרצה
+      # של GitHub Actions לפני הבנייה, כך שכל APK מקבל גרסה עולה אוטומטית.
+      - name: Bump version (versionCode/versionName)
+        run: |
+          sed -i "s/versionCode [0-9]\+/versionCode ${{ github.run_number }}/" app/build.gradle
+          sed -i "s/versionName \"[^\"]*\"/versionName \"1.${{ github.run_number }}\"/" app/build.gradle
+          grep -E "versionCode|versionName" app/build.gradle
+
+      # minSdk 19 (אנדרואיד 4.4 KitKat) מוגדר בקוד עצמו (app/build.gradle) -
+      # ה-CI רק מקמפל, לא משנה את גרסת היעד.
+      - name: Build debug APK
+        run: |
+          export PATH="$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools"
+          gradle assembleDebug --stacktrace --console=plain
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: netwatch-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      # יוצר GitHub Release קבוע רק כשהבנייה רצה בעקבות push בפועל (לא
+      # מהרצה ידנית דרך workflow_dispatch), כדי לא ליצור Release ריק בטעות.
+      - name: Create GitHub Release with APK
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: "רענון רשת אוטומטי - build #${{ github.run_number }}"
+          body: |
+            APK דיבאג שנבנה אוטומטית מקומיט ${{ github.sha }}.
+            גרסה: versionCode ${{ github.run_number }}.
+            לא APK חתום ל-release רשמי (release חתום דורש keystore נפרד).
+          files: app/build/outputs/apk/debug/app-debug.apk

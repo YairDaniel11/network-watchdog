@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- כפתור הפעולה הראשי (רענון ידני) - טורקיז, עם מסגרת ירוקה במצב פוקוס/לחיצה
+     כדי לתת חיווי ניווט ברור במכשיר מקשים ללא מסך מגע. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <corners android:radius="10dp" />
+            <solid android:color="@color/accent_teal" />
+            <stroke android:width="3dp" android:color="@color/focus_green" />
+        </shape>
+    </item>
+
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <corners android:radius="10dp" />
+            <solid android:color="@color/accent_teal" />
+            <stroke android:width="3dp" android:color="@color/focus_green" />
+        </shape>
+    </item>
+
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="10dp" />
+            <solid android:color="@color/accent_teal" />
+        </shape>
+    </item>
+
+</selector>
