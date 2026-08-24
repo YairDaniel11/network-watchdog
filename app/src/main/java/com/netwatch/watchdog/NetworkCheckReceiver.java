@@ -7,20 +7,27 @@ import android.content.SharedPreferences;
 import android.os.PowerManager;
 
 /**
- * מתעורר כל 5 דקות ע"י AlarmManager (ראו AlarmScheduler). בודק - רק לפי
- * המתגים שהמשתמש הפעיל בפועל (מעקב טלפוני / מעקב אינטרנט, כל אחד בנפרד) -
- * האם יש רשת. רק אם *אין* רשת (ולא בכל מקרה, בניגוד לגרסה הקודמת של
- * האפליקציה), מפעיל מצב טיסה ל-3 שניות כדי לגרום למכשיר לתפוס רשת מחדש.
+ * מתעורר כל 5 דקות (משורשר מחדש דרך AlarmScheduler.scheduleNext בסוף כל
+ * בדיקה - ראו שם). בודק - רק לפי המתגים שהמשתמש הפעיל בפועל (מעקב טלפוני
+ * / מעקב אינטרנט, כל אחד בנפרד) - האם יש רשת. רק אם *אין* רשת, מפעיל
+ * רענון.
  *
- * עובד עם goAsync() + WakeLock קצר כי הבדיקה (במיוחד בדיקת האינטרנט + 3
- * שניות ההמתנה אם צריך לרענן) לוקחת יותר מכמה מילישניות שמותר ל-onReceive
- * הרגיל לחסום - וגם כדי שהמכשיר לא ירדם באמצע הבדיקה אם המסך כבוי.
+ * שני מקרים נבדקים בנפרד:
+ *  1) מצב טיסה כבר דלוק (Settings.Global.AIRPLANE_MODE_ON) - למשל המשתמש
+ *     הפעיל אותו ידנית בטעות ושכח לכבות. במקרה הזה פשוט מכבים אותו
+ *     מיידית (forceAirplaneModeOff) - אין טעם "להדליק" משהו שכבר דלוק.
+ *     זה מתקן את התרחיש שבו מעקב פעיל לא החזיר את המכשיר ממצב טיסה ידני.
+ *  2) מצב טיסה כבוי אבל בכל זאת אין קליטה/אינטרנט בפועל - מבצעים את
+ *     הרענון המלא (דלוק->3 שניות->כבוי).
+ *
+ * בנוסף עוקבים אחרי מעברי מצב (עלה/ירד) כדי להפעיל התרעת קול/רטט פעם
+ * אחת בכל מעבר, לא בכל בדיקה - ראו AlertPlayer + AppPrefs.KEY_LAST_NETWORK_STATE.
  */
 public class NetworkCheckReceiver extends BroadcastReceiver {
 
     private static final String WAKE_LOCK_TAG = "netwatch:check";
-    // תקרת בטיחות ל-WakeLock - קצת יותר משוואת התרחיש הכי ארוך האפשרי
-    // (בדיקת אינטרנט + החלפת מצב טיסה), כדי שלעולם לא נחזיק אותו לנצח
+    // תקרת בטיחות ל-WakeLock - קצת יותר מהתרחיש הכי ארוך האפשרי (בדיקת
+    // אינטרנט + רענון מלא + ניגון התרעה), כדי שלעולם לא נחזיק אותו לנצח
     // אם קרתה תקלה בלתי צפויה בשרשור הרקע.
     private static final long WAKE_LOCK_SAFETY_TIMEOUT_MS = 30_000L;
 
@@ -31,9 +38,7 @@ public class NetworkCheckReceiver extends BroadcastReceiver {
         final boolean internetMonitor = prefs.getBoolean(AppPrefs.KEY_INTERNET_MONITOR, false);
 
         if (!phoneMonitor && !internetMonitor) {
-            // שני המתגים כבויים - אין מה לבדוק. מבטלים גם את האלארם עצמו
-            // ליתר ביטחון (מצב שלא אמור לקרות בזרימה הרגילה, כי כיבוי מתג
-            // מבטל את האלארם ישירות דרך AlarmScheduler, אבל רשת בטיחות זולה).
+            // שני המתגים כבויים - אין מה לבדוק, וגם לא ממשיכים את השרשרת.
             AlarmScheduler.scheduleIfNeeded(context);
             return;
         }
@@ -52,13 +57,11 @@ public class NetworkCheckReceiver extends BroadcastReceiver {
             @Override
             public void run() {
                 try {
-                    boolean phoneDown = phoneMonitor && !NetworkStatusChecker.isPhoneNetworkAvailable(context);
-                    boolean internetDown = internetMonitor && !NetworkStatusChecker.isInternetReachable();
-
-                    if (phoneDown || internetDown) {
-                        AirplaneModeToggler.toggleAirplaneModeBlocking();
-                    }
+                    runCheck(context, prefs, phoneMonitor, internetMonitor);
                 } finally {
+                    // ממשיכים את השרשרת לבדיקה הבאה בעוד 5 דקות, רק אם עדיין
+                    // יש מעקב פעיל (ייתכן שהמשתמש כיבה את שניהם בדיוק באמצע).
+                    AlarmScheduler.scheduleIfNeeded(context);
                     if (wakeLock != null && wakeLock.isHeld()) {
                         wakeLock.release();
                     }
@@ -66,5 +69,33 @@ public class NetworkCheckReceiver extends BroadcastReceiver {
                 }
             }
         }, "NetworkCheckThread").start();
+    }
+
+    private void runCheck(Context context, SharedPreferences prefs, boolean phoneMonitor, boolean internetMonitor) {
+        boolean airplaneOn = NetworkStatusChecker.isAirplaneModeOn(context);
+        boolean phoneDown = phoneMonitor && !NetworkStatusChecker.isPhoneNetworkAvailable(context);
+        boolean internetDown = internetMonitor && !NetworkStatusChecker.isInternetReachable();
+        boolean isDown = airplaneOn || phoneDown || internetDown;
+
+        String previousState = prefs.getString(AppPrefs.KEY_LAST_NETWORK_STATE, AppPrefs.NETWORK_STATE_UP);
+        boolean wasDown = AppPrefs.NETWORK_STATE_DOWN.equals(previousState);
+
+        if (isDown && !wasDown) {
+            // מעבר חדש: היה תקין -> עכשיו אין קליטה. מתריעים פעם אחת.
+            AlertPlayer.playLostAlert(context);
+        } else if (!isDown && wasDown) {
+            // מעבר חדש: היה למטה -> עכשיו חזר. מתריעים פעם אחת.
+            AlertPlayer.playRestoredAlert(context);
+        }
+        prefs.edit()
+                .putString(AppPrefs.KEY_LAST_NETWORK_STATE, isDown ? AppPrefs.NETWORK_STATE_DOWN : AppPrefs.NETWORK_STATE_UP)
+                .apply();
+
+        if (airplaneOn) {
+            // כבר במצב טיסה (למשל הופעל ידנית) - רק מכבים, לא "מהבהבים".
+            AirplaneModeToggler.forceAirplaneModeOff();
+        } else if (phoneDown || internetDown) {
+            AirplaneModeToggler.toggleAirplaneModeBlocking();
+        }
     }
 }

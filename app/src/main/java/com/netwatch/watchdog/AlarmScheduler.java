@@ -13,6 +13,13 @@ import android.os.SystemClock;
  * (NetworkCheckReceiver) - במכוון *לא* Service שרץ ברצף ברקע, כדי לצרוך
  * כמה שפחות RAM וסוללה: בין הבדיקות אין שום קוד של האפליקציה רץ בכלל,
  * המערכת פשוט מעירה את ה-receiver לכמה שניות כל 5 דקות ואז חוזרת לישון.
+ *
+ * משתמשים ב-setExactAndAllowWhileIdle (לא setInexactRepeating) ומתזמנים
+ * מחדש בכל פעם מתוך NetworkCheckReceiver עצמו (שרשרת "one-shot" ולא
+ * repeating אמיתי) - כי setInexactRepeating עלול להידחות משמעותית
+ * (לפעמים שעות) תחת Doze/App Standby באנדרואיד מודרני, ולא מספיק אמין
+ * למטרה של "לזהות אובדן קליטה תוך כמה דקות". ראו גם RootPowerUtil
+ * לתיקוני אמינות נוספים (הרשאת אלארמים מדויקים + פטור מחיסכון סוללה).
  */
 public final class AlarmScheduler {
 
@@ -22,29 +29,37 @@ public final class AlarmScheduler {
     public static final long INTERVAL_MS = 5 * 60 * 1000L; // 5 דקות
     private static final int REQUEST_CODE = 1001;
 
-    /** קוראים לזה בכל שינוי של אחד משני מתגי המעקב, וגם ב-BootReceiver. */
+    /** קוראים לזה בכל שינוי של אחד ממתגי המעקב, וגם ב-BootReceiver. */
     public static void scheduleIfNeeded(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(AppPrefs.PREFS_NAME, Context.MODE_PRIVATE);
         boolean phoneOn = prefs.getBoolean(AppPrefs.KEY_PHONE_MONITOR, false);
         boolean netOn = prefs.getBoolean(AppPrefs.KEY_INTERNET_MONITOR, false);
         if (phoneOn || netOn) {
-            schedule(context);
+            scheduleNext(context);
         } else {
             cancel(context);
         }
     }
 
-    private static void schedule(Context context) {
+    /**
+     * מתזמן את הבדיקה *הבאה* בעוד 5 דקות. נקרא גם מכאן (הפעלה ראשונה)
+     * וגם מ-NetworkCheckReceiver בסוף כל בדיקה (כדי להמשיך את השרשרת).
+     */
+    public static void scheduleNext(Context context) {
         AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (am == null) {
             return;
         }
         long triggerAt = SystemClock.elapsedRealtime() + INTERVAL_MS;
-        // setInexactRepeating (לא setExact/setExactAndAllowWhileIdle) בכוונה:
-        // התזמון לא צריך להיות מדויק לשנייה, ומאפשר למערכת לאגד (batch)
-        // את ההתעוררות עם אלארמים אחרים - זה משמעותית יותר חסכוני בסוללה,
-        // ותואם את בקשת "כמה שפחות סוללה" של המשתמש.
-        am.setInexactRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAt, INTERVAL_MS, pendingIntent(context));
+        PendingIntent pi = pendingIntent(context);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            // setExactAndAllowWhileIdle - מדויק ומתעורר גם במצב Doze (בכפוף
+            // ל"קצב" השהיות שהמערכת אוכפת בכל זאת ב-Doze עמוק, אבל משמעותית
+            // אמין יותר מ-setInexactRepeating).
+            am.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAt, pi);
+        } else {
+            am.setExact(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAt, pi);
+        }
     }
 
     private static void cancel(Context context) {

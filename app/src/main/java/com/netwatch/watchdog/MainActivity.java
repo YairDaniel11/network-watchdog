@@ -1,33 +1,26 @@
 package com.netwatch.watchdog;
 
 import android.app.Activity;
-import android.content.SharedPreferences;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
 /**
- * מסך יחיד: סטטוס רוט, כפתור רענון רשת ידני, ושני כפתורי מעקב עצמאיים
- * (רשת טלפונית / אינטרנט) שכל אחד מהם מפעיל/מכבה בנפרד את הבדיקה
- * התקופתית (ראו AlarmScheduler + NetworkCheckReceiver).
- *
- * במכוון בלי AsyncTask/Service - כל פעולה ברקע היא Thread רגיל שחוזר
- * ל-UI thread דרך Handler, כדי לשמור על טביעת רגל RAM מינימלית.
+ * מסך ראשי - מכוון להיות מינימלי ככל האפשר: כפתור רענון ידני למעלה,
+ * שורת סטטוס רוט מתחתיו, וכפתור "הגדרות" בתחתית שפותח את SettingsActivity
+ * (שם נמצאים מעקבי הרשת והתרעות הקול/רטט).
  */
 public class MainActivity extends Activity implements View.OnClickListener {
 
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
 
-    private SharedPreferences prefs;
     private TextView rootStatusText;
     private Button btnManualRefresh;
     private TextView manualRefreshStatusText;
-    private Button btnPhoneMonitor;
-    private Button btnInternetMonitor;
 
     private boolean manualRefreshInProgress = false;
 
@@ -37,37 +30,29 @@ public class MainActivity extends Activity implements View.OnClickListener {
         ThemeUtil.applyTheme(this);
         setContentView(R.layout.activity_main);
 
-        prefs = getSharedPreferences(AppPrefs.PREFS_NAME, MODE_PRIVATE);
-
         rootStatusText = (TextView) findViewById(R.id.rootStatusText);
         btnManualRefresh = (Button) findViewById(R.id.btnManualRefresh);
         manualRefreshStatusText = (TextView) findViewById(R.id.manualRefreshStatusText);
-        btnPhoneMonitor = (Button) findViewById(R.id.btnPhoneMonitor);
-        btnInternetMonitor = (Button) findViewById(R.id.btnInternetMonitor);
+        Button btnSettings = (Button) findViewById(R.id.btnSettings);
 
         btnManualRefresh.setOnClickListener(this);
-        btnPhoneMonitor.setOnClickListener(this);
-        btnInternetMonitor.setOnClickListener(this);
+        btnSettings.setOnClickListener(this);
 
         checkRootStatusAsync();
-        refreshToggleButtonsUi();
     }
 
     @Override
     public void onClick(View v) {
-        if (v == btnManualRefresh) {
+        if (v.getId() == R.id.btnManualRefresh) {
             onManualRefreshClicked();
-        } else if (v == btnPhoneMonitor) {
-            onPhoneMonitorToggleClicked();
-        } else if (v == btnInternetMonitor) {
-            onInternetMonitorToggleClicked();
+        } else if (v.getId() == R.id.btnSettings) {
+            startActivity(new Intent(this, SettingsActivity.class));
         }
     }
 
     // ---------- סטטוס רוט ----------
 
     private void checkRootStatusAsync() {
-        // תצוגה ראשונית מיידית (לא חוסמת) - בדיקת su מלאה רצה אחר כך ב-thread נפרד.
         rootStatusText.setText(getString(R.string.root_status_checking));
 
         new Thread(new Runnable() {
@@ -119,64 +104,5 @@ public class MainActivity extends Activity implements View.OnClickListener {
                 });
             }
         }, "ManualRefreshThread").start();
-    }
-
-    // ---------- מעקב רשת טלפונית ----------
-
-    private void onPhoneMonitorToggleClicked() {
-        boolean currentlyOn = prefs.getBoolean(AppPrefs.KEY_PHONE_MONITOR, false);
-        if (currentlyOn) {
-            setPhoneMonitorEnabled(false);
-            return;
-        }
-        // מפעילים: קודם צריך READ_PHONE_STATE (הרשאה בזמן ריצה מ-API 23+).
-        if (PermissionUtil.hasReadPhoneState(this)) {
-            setPhoneMonitorEnabled(true);
-        } else {
-            Toast.makeText(this, R.string.phone_permission_needed, Toast.LENGTH_LONG).show();
-            PermissionUtil.requestReadPhoneState(this);
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PermissionUtil.REQUEST_CODE_PHONE_STATE) {
-            boolean granted = grantResults.length > 0 && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED;
-            if (granted) {
-                setPhoneMonitorEnabled(true);
-            }
-            // אם נדחה - המתג פשוט נשאר כבוי, אין צורך בטיפול נוסף.
-        }
-    }
-
-    private void setPhoneMonitorEnabled(boolean enabled) {
-        prefs.edit().putBoolean(AppPrefs.KEY_PHONE_MONITOR, enabled).apply();
-        AlarmScheduler.scheduleIfNeeded(this);
-        refreshToggleButtonsUi();
-    }
-
-    // ---------- מעקב אינטרנט ----------
-
-    private void onInternetMonitorToggleClicked() {
-        boolean currentlyOn = prefs.getBoolean(AppPrefs.KEY_INTERNET_MONITOR, false);
-        prefs.edit().putBoolean(AppPrefs.KEY_INTERNET_MONITOR, !currentlyOn).apply();
-        AlarmScheduler.scheduleIfNeeded(this);
-        refreshToggleButtonsUi();
-    }
-
-    // ---------- עדכון תצוגת הכפתורים ----------
-
-    private void refreshToggleButtonsUi() {
-        boolean phoneOn = prefs.getBoolean(AppPrefs.KEY_PHONE_MONITOR, false);
-        boolean internetOn = prefs.getBoolean(AppPrefs.KEY_INTERNET_MONITOR, false);
-
-        applyToggleState(btnPhoneMonitor, phoneOn, getString(R.string.phone_monitor_title));
-        applyToggleState(btnInternetMonitor, internetOn, getString(R.string.internet_monitor_title));
-    }
-
-    private void applyToggleState(Button button, boolean on, String title) {
-        button.setBackgroundResource(on ? R.drawable.bg_toggle_on : R.drawable.bg_toggle_off);
-        button.setText(title + "\n(" + getString(on ? R.string.monitor_on : R.string.monitor_off) + ")");
     }
 }

@@ -23,10 +23,14 @@
          משוחרר תמיד מיד בסיום, כדי לא לפגוע בסוללה. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <!-- הרשאה "רגילה" (לא דורשת דיאלוג) - מאפשרת לבקש מהמשתמש להוציא את
-         האפליקציה מרשימת חיסכון הסוללה, כדי שהבדיקה כל 5 דקות לא תידחה
-         משמעותית ע"י Doze במכשירים חדשים (לא רלוונטי במכשיר היעד הישן). -->
+    <!-- שתי ההרשאות הבאות ניתנות בפועל בשקט דרך רוט (ראו RootPowerUtil),
+         בלי לגרור את המשתמש לדיאלוג מערכת - אבל עדיין צריך להצהיר עליהן
+         כאן, אחרת גם appops/dumpsys לא יכולים להעניק אותן. -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+    <!-- לרטט בהתרעות (ראו AlertPlayer). -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:allowBackup="true"
@@ -44,6 +48,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- מסך ההגדרות (מעקבים + התרעות קול/רטט) - נפתח רק מתוך המסך
+             הראשי של האפליקציה עצמה, ולכן exported="false". -->
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:label="@string/settings_title" />
 
         <!-- מתעורר ע"י AlarmManager כל 5 דקות (ראו AlarmScheduler). אין לו
              intent-filter (מופעל רק ע"י PendingIntent פנימי מפורש), ולכן

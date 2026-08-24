@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ScrollView + fillViewport - המסך הזה ארוך (4 מקטעים), חובה שיהיה
+     ניתן לגלול אליו במלואו גם במכשיר עם מסך קטן. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="?attr/colorBgMain">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingLeft="20dp"
+        android:paddingRight="20dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="32dp">
+
+        <!-- מקטע 1: מעקב רשת -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/section_monitors"
+            android:textColor="?attr/colorTextPrimary"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:paddingBottom="6dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/monitor_explanation"
+            android:textColor="?attr/colorTextSecondary"
+            android:textSize="12sp"
+            android:paddingBottom="14dp" />
+
+        <Button
+            android:id="@+id/btnPhoneMonitor"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/bg_toggle_off"
+            android:textColor="@color/text_white"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:focusable="true"
+            android:focusableInTouchMode="false" />
+
+        <Button
+            android:id="@+id/btnInternetMonitor"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:background="@drawable/bg_toggle_off"
+            android:textColor="@color/text_white"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:focusable="true"
+            android:focusableInTouchMode="false" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?attr/colorDivider"
+            android:layout_marginTop="22dp"
+            android:layout_marginBottom="22dp" />
+
+        <!-- מקטע 2: התרעה כשאין קליטה -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/section_alert_lost"
+            android:textColor="?attr/colorTextPrimary"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:paddingBottom="10dp" />
+
+        <CheckBox
+            android:id="@+id/checkAlertLostEnabled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/alert_enable"
+            android:textColor="?attr/colorTextPrimary"
+            android:textSize="15sp"
+            android:paddingBottom="10dp" />
+
+        <Button
+            android:id="@+id/btnAlertLostSound"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginBottom="10dp"
+            android:background="@drawable/bg_toggle_off"
+            android:text="@string/alert_choose_sound"
+            android:textColor="@color/text_white"
+            android:textSize="14sp"
+            android:focusable="true"
+            android:focusableInTouchMode="false" />
+
+        <TextView
+            android:id="@+id/alertLostSoundName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="?attr/colorTextSecondary"
+            android:textSize="12sp"
+            android:paddingBottom="10dp" />
+
+        <RadioGroup
+            android:id="@+id/radioAlertLostMode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <RadioButton
+                android:id="@+id/radioLostSoundVibrate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/alert_mode_sound_vibrate"
+                android:textColor="?attr/colorTextPrimary" />
+
+            <RadioButton
+                android:id="@+id/radioLostSoundOnly"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/alert_mode_sound_only"
+                android:textColor="?attr/colorTextPrimary" />
+
+            <RadioButton
+                android:id="@+id/radioLostVibrateOnly"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/alert_mode_vibrate_only"
+                android:textColor="?attr/colorTextPrimary" />
+        </RadioGroup>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?attr/colorDivider"
+            android:layout_marginTop="22dp"
+            android:layout_marginBottom="22dp" />
+
+        <!-- מקטע 3: התרעה כשחוזרת הקליטה -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/section_alert_restored"
+            android:textColor="?attr/colorTextPrimary"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:paddingBottom="10dp" />
+
+        <CheckBox
+            android:id="@+id/checkAlertRestoredEnabled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/alert_enable"
+            android:textColor="?attr/colorTextPrimary"
+            android:textSize="15sp"
+            android:paddingBottom="10dp" />
+
+        <Button
+            android:id="@+id/btnAlertRestoredSound"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginBottom="10dp"
+            android:background="@drawable/bg_toggle_off"
+            android:text="@string/alert_choose_sound"
+            android:textColor="@color/text_white"
+            android:textSize="14sp"
+            android:focusable="true"
+            android:focusableInTouchMode="false" />
+
+        <TextView
+            android:id="@+id/alertRestoredSoundName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="?attr/colorTextSecondary"
+            android:textSize="12sp"
+            android:paddingBottom="10dp" />
+
+        <RadioGroup
+            android:id="@+id/radioAlertRestoredMode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <RadioButton
+                android:id="@+id/radioRestoredSoundVibrate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/alert_mode_sound_vibrate"
+                android:textColor="?attr/colorTextPrimary" />
+
+            <RadioButton
+                android:id="@+id/radioRestoredSoundOnly"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/alert_mode_sound_only"
+                android:textColor="?attr/colorTextPrimary" />
+
+            <RadioButton
+                android:id="@+id/radioRestoredVibrateOnly"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/alert_mode_vibrate_only"
+                android:textColor="?attr/colorTextPrimary" />
+        </RadioGroup>
+
+    </LinearLayout>
+</ScrollView>

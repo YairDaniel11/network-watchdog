@@ -2,20 +2,35 @@
 <resources>
     <string name="app_name">רענון רשת אוטומטי</string>
 
-    <string name="root_status_checking">בודק הרשאות רוט…</string>
-    <string name="root_status_yes">הרשאות רוט: קיימות ✓</string>
-    <string name="root_status_no">הרשאות רוט: לא נמצאו - האפליקציה לא תוכל לרענן רשת ללא רוט</string>
-
-    <string name="manual_refresh_button">רענון רשת ידני\n(מצב טיסה ל-3 שניות)</string>
+    <!-- מסך ראשי -->
+    <string name="manual_refresh_button">רענן רשת עכשיו</string>
     <string name="manual_refresh_in_progress">מרענן רשת… (מצב טיסה ל-3 שניות)</string>
     <string name="manual_refresh_done">רענון הרשת הושלם</string>
     <string name="manual_refresh_failed">הרענון נכשל - ודא/י שיש הרשאות רוט</string>
 
+    <string name="root_status_checking">בודק הרשאות רוט…</string>
+    <string name="root_status_yes">הרשאות רוט: קיימות ✓</string>
+    <string name="root_status_no">הרשאות רוט: לא נמצאו - האפליקציה לא תוכל לרענן רשת ללא רוט</string>
+
+    <string name="settings_button">הגדרות</string>
+
+    <!-- מסך הגדרות -->
+    <string name="settings_title">הגדרות</string>
+
+    <string name="section_monitors">מעקב רשת</string>
     <string name="phone_monitor_title">מעקב רשת טלפונית</string>
     <string name="internet_monitor_title">מעקב אינטרנט</string>
     <string name="monitor_on">פעיל</string>
     <string name="monitor_off">כבוי</string>
-    <string name="monitor_explanation">כשמופעל: בודק כל 5 דקות אם יש רשת, ורק אם אין - מרענן אוטומטית באותה שיטה</string>
-
+    <string name="monitor_explanation">כשמופעל: בודק כל 5 דקות אם יש רשת, ורק אם אין - מרענן אוטומטית. גם אם הועבר המכשיר למצב טיסה ידנית, המעקב יוציא אותו ממנו.</string>
     <string name="phone_permission_needed">כדי להפעיל מעקב רשת טלפונית, האפליקציה צריכה הרשאה לקרוא את מצב הטלפון</string>
+
+    <string name="section_alert_lost">התרעה כשאין קליטה</string>
+    <string name="section_alert_restored">התרעה כשחוזרת הקליטה</string>
+    <string name="alert_enable">הפעל התרעה</string>
+    <string name="alert_choose_sound">בחר/י צליל</string>
+    <string name="alert_sound_default">צליל ברירת המחדל של המכשיר</string>
+    <string name="alert_mode_sound_vibrate">צליל ורטט</string>
+    <string name="alert_mode_sound_only">צליל בלבד</string>
+    <string name="alert_mode_vibrate_only">רטט בלבד</string>
 </resources>
