@@ -1,6 +1,7 @@
 package com.netwatch.watchdog;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Build;
 
 import java.io.DataOutputStream;
@@ -26,9 +27,10 @@ public final class RootPowerUtil {
 
     /**
      * מריץ את שני תיקוני האמינות. קוראים לזה פעם אחת כשמפעילים מעקב
-     * כלשהו לראשונה (ראו MainActivity). לא חוסם UI - יש להריץ מ-thread
-     * ברקע. שקט לחלוטין - כשלון בצד אחד לא עוצר את השני, וכשלון בשניהם
-     * לא קריטי (האלארם עדיין ירוץ, פשוט עלול להיות פחות מדויק בזמן).
+     * כלשהו לראשונה, ומדי פעם שוב (ראו applyIfAnyMonitorEnabledAsync).
+     * לא חוסם UI - יש להריץ מ-thread ברקע. שקט לחלוטין - כשלון בצד אחד
+     * לא עוצר את השני, וכשלון בשניהם לא קריטי (האלארם עדיין ירוץ, פשוט
+     * עלול להיות פחות מדויק בזמן).
      */
     public static void applyReliabilityFixesBlocking(Context context) {
         String pkg = context.getPackageName();
@@ -43,6 +45,29 @@ public final class RootPowerUtil {
         // שדיאלוג ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS היה מבקש
         // מהמשתמש לאשר, רק בלי הדיאלוג.
         runRootCommand("dumpsys deviceidle whitelist +" + pkg);
+    }
+
+    /**
+     * גרסה נוחה שבודקת קודם אם יש בכלל מעקב פעיל (אחרת אין טעם), ומריצה
+     * את הבדיקה/תיקון ב-thread נפרד כדי לא לחסום את ה-UI. קוראים לזה
+     * מ-onResume של המסך הראשי ומסך ההגדרות - חלק מיצרני מכשירים (ROM-ים
+     * אגרסיביים) יכולים להחזיר את האפליקציה לרשימת חיסכון סוללה מדי פעם
+     * מבלי לשאול, אז "מרעננים" את הפטור בכל פתיחת מסך, לא רק בפעם הראשונה.
+     */
+    public static void applyIfAnyMonitorEnabledAsync(final Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(AppPrefs.PREFS_NAME, Context.MODE_PRIVATE);
+        boolean anyOn = prefs.getBoolean(AppPrefs.KEY_PHONE_MONITOR, false)
+                || prefs.getBoolean(AppPrefs.KEY_INTERNET_MONITOR, false);
+        if (!anyOn) {
+            return;
+        }
+        final Context appContext = context.getApplicationContext();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                applyReliabilityFixesBlocking(appContext);
+            }
+        }, "ReliabilityFixThread").start();
     }
 
     private static void runRootCommand(String shellCommand) {

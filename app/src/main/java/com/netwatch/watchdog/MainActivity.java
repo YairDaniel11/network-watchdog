@@ -42,6 +42,19 @@ public class MainActivity extends Activity implements View.OnClickListener {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        // תיקון-עצמי: כמה מיצרני מכשירים (במיוחד ROM-ים סיניים אגרסיביים
+        // עם "מנקה זיכרון" מובנה) יכולים להרוג את האלארם החוזר מבחוץ בלי
+        // שהאפליקציה תדע, ואפילו להחזיר את האפליקציה לרשימת חיסכון
+        // הסוללה מדי פעם. כל פתיחה של המסך הראשי רושמת את האלארם מחדש
+        // (קריאה אידמפוטנטית וזולה - לא עושה כלום אם המעקב כבוי) ומריצה
+        // שוב את תיקוני הרוט ברקע אם מעקב כלשהו פעיל.
+        AlarmScheduler.scheduleIfNeeded(this);
+        RootPowerUtil.applyIfAnyMonitorEnabledAsync(this);
+    }
+
+    @Override
     public void onClick(View v) {
         if (v.getId() == R.id.btnManualRefresh) {
             onManualRefreshClicked();

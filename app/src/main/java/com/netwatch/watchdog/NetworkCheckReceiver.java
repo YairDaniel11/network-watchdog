@@ -7,10 +7,10 @@ import android.content.SharedPreferences;
 import android.os.PowerManager;
 
 /**
- * מתעורר כל 5 דקות (משורשר מחדש דרך AlarmScheduler.scheduleNext בסוף כל
- * בדיקה - ראו שם). בודק - רק לפי המתגים שהמשתמש הפעיל בפועל (מעקב טלפוני
- * / מעקב אינטרנט, כל אחד בנפרד) - האם יש רשת. רק אם *אין* רשת, מפעיל
- * רענון.
+ * מתעורר כל 5 דקות ע"י אלארם חוזר אמיתי שנרשם פעם אחת ב-AlarmScheduler
+ * (לא שרשור עצמי - ראו הערה מפורטת שם על למה זה תוקן). בודק - רק לפי
+ * המתגים שהמשתמש הפעיל בפועל (מעקב טלפוני / מעקב אינטרנט, כל אחד
+ * בנפרד) - האם יש רשת. רק אם *אין* רשת, מפעיל רענון.
  *
  * שני מקרים נבדקים בנפרד:
  *  1) מצב טיסה כבר דלוק (Settings.Global.AIRPLANE_MODE_ON) - למשל המשתמש
@@ -38,7 +38,8 @@ public class NetworkCheckReceiver extends BroadcastReceiver {
         final boolean internetMonitor = prefs.getBoolean(AppPrefs.KEY_INTERNET_MONITOR, false);
 
         if (!phoneMonitor && !internetMonitor) {
-            // שני המתגים כבויים - אין מה לבדוק, וגם לא ממשיכים את השרשרת.
+            // שני המתגים כבויים (למשל כובו ממש בין הפעלה להפעלה) - מבטלים
+            // את האלארם עצמו ליתר ביטחון, אין מה לבדוק.
             AlarmScheduler.scheduleIfNeeded(context);
             return;
         }
@@ -59,9 +60,9 @@ public class NetworkCheckReceiver extends BroadcastReceiver {
                 try {
                     runCheck(context, prefs, phoneMonitor, internetMonitor);
                 } finally {
-                    // ממשיכים את השרשרת לבדיקה הבאה בעוד 5 דקות, רק אם עדיין
-                    // יש מעקב פעיל (ייתכן שהמשתמש כיבה את שניהם בדיוק באמצע).
-                    AlarmScheduler.scheduleIfNeeded(context);
+                    // האלארם החוזר עצמו לא תלוי בקוד הזה בכלל (נרשם פעם
+                    // אחת אצל המערכת - ראו AlarmScheduler) - כאן רק
+                    // משחררים משאבים של הבדיקה הנוכחית.
                     if (wakeLock != null && wakeLock.isHeld()) {
                         wakeLock.release();
                     }

@@ -118,6 +118,9 @@ public class SettingsActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        // אותו תיקון-עצמי כמו במסך הראשי - ראו שם.
+        AlarmScheduler.scheduleIfNeeded(this);
+        RootPowerUtil.applyIfAnyMonitorEnabledAsync(this);
         refreshAllUi();
     }
 
@@ -178,18 +181,7 @@ public class SettingsActivity extends Activity {
     private void onAnyMonitorChanged() {
         AlarmScheduler.scheduleIfNeeded(this);
         refreshMonitorButtonsUi();
-
-        final boolean anyOn = prefs.getBoolean(AppPrefs.KEY_PHONE_MONITOR, false)
-                || prefs.getBoolean(AppPrefs.KEY_INTERNET_MONITOR, false);
-        if (anyOn) {
-            final android.content.Context appContext = getApplicationContext();
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    RootPowerUtil.applyReliabilityFixesBlocking(appContext);
-                }
-            }, "ReliabilityFixThread").start();
-        }
+        RootPowerUtil.applyIfAnyMonitorEnabledAsync(this);
     }
 
     // ---------- בחירת צליל ----------
