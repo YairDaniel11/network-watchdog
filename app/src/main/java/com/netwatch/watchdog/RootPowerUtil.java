@@ -3,8 +3,6 @@ package com.netwatch.watchdog;
 import android.content.Context;
 import android.os.Build;
 
-import java.io.DataOutputStream;
-
 /**
  * שני תיקוני אמינות (הרשאת אלארמים מדויקים + פטור מחיסכון סוללה) שבדרך
  * כלל דורשים אישור המשתמש דרך דיאלוג מערכת - אבל במכשיר מקשים ללא מסך
@@ -23,6 +21,8 @@ public final class RootPowerUtil {
     private RootPowerUtil() {
     }
 
+    private static final long FIX_TIMEOUT_MS = 6_000L;
+
     /** גרסה לא-חוסמת - מריצה ב-thread נפרד, בטוחה לקרוא מה-UI thread. */
     public static void applyReliabilityFixesAsync(Context context) {
         final Context appContext = context.getApplicationContext();
@@ -34,7 +34,7 @@ public final class RootPowerUtil {
         }, "ReliabilityFixThread").start();
     }
 
-    /** גרסה חוסמת - יש לקרוא רק מ-thread ברקע. */
+    /** גרסה חוסמת (עד FIX_TIMEOUT_MS לכל היותר, בזכות RootShell) - יש לקרוא רק מ-thread ברקע. */
     public static void applyReliabilityFixesBlocking(Context context) {
         String pkg = context.getPackageName();
         StringBuilder cmd = new StringBuilder();
@@ -48,26 +48,8 @@ public final class RootPowerUtil {
         // מהמשתמש לאשר, רק בלי הדיאלוג.
         cmd.append("dumpsys deviceidle whitelist +").append(pkg);
 
-        boolean ok = runRootCommand(cmd.toString());
-        DiagnosticsLog.log(context, "תיקוני רוט (אלארם/סוללה): " + (ok ? "בוצע" : "נכשל"));
-    }
-
-    private static boolean runRootCommand(String shellCommand) {
-        Process process = null;
-        try {
-            process = Runtime.getRuntime().exec("su");
-            DataOutputStream os = new DataOutputStream(process.getOutputStream());
-            os.writeBytes(shellCommand + "\n");
-            os.writeBytes("exit\n");
-            os.flush();
-            int exit = process.waitFor();
-            return exit == 0;
-        } catch (Exception e) {
-            return false;
-        } finally {
-            if (process != null) {
-                process.destroy();
-            }
-        }
+        RootShell.Result result = RootShell.exec(cmd.toString(), FIX_TIMEOUT_MS);
+        String detail = result.success ? "בוצע" : (result.timedOut ? "נתקע בזמן" : "נכשל");
+        DiagnosticsLog.log(context, "תיקוני רוט (אלארם/סוללה): " + detail);
     }
 }

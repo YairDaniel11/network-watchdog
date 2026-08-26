@@ -14,6 +14,8 @@ public final class RootUtil {
     private RootUtil() {
     }
 
+    private static final long CHECK_TIMEOUT_MS = 6_000L;
+
     private static final String[] SU_PATHS = {
             "/system/xbin/su", "/system/bin/su", "/sbin/su",
             "/system/sd/xbin/su", "/data/local/xbin/su", "/data/local/bin/su",
@@ -34,17 +36,26 @@ public final class RootUtil {
     /**
      * בדיקה מלאה - מריצה בפועל "su -c id" ובודקת ש-uid=0 חזר, כלומר
      * שהמשתמש אכן אישר (או שההרשאה כבר קיימת) גישת רוט לאפליקציה, לא רק
-     * שקובץ su קיים על המכשיר. חוסמת - יש לקרוא רק מ-thread ברקע, לעולם
-     * לא מה-UI thread.
+     * שקובץ su קיים על המכשיר. חוסמת עד CHECK_TIMEOUT_MS לכל היותר - יש
+     * לקרוא רק מ-thread ברקע, לעולם לא מה-UI thread.
+     *
+     * חשוב: הבדיקה הישנה קראה שורת פלט (readLine) *לפני* שהמתינה לסיום
+     * התהליך - readLine עצמו יכול להיתקע לנצח אם מנהל ה-root תקוע. עכשיו
+     * קודם ממתינים (עם תקרת זמן, דרך RootShell) שהתהליך יסיים, ורק אחר
+     * כך קוראים את הפלט שכבר מוכן ומחכה בבאפר - קריאה כזו לא יכולה
+     * להיתקע כי התהליך כבר סיים לרוץ.
      */
     public static boolean isRootGrantedBlocking() {
         Process process = null;
         try {
             process = Runtime.getRuntime().exec(new String[]{"su", "-c", "id"});
+            RootShell.Result result = RootShell.waitForProcess(process, CHECK_TIMEOUT_MS);
+            if (!result.success) {
+                return false; // נכשל או נתקע בזמן - בכל מקרה אין רוט מאושר בפועל
+            }
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line = reader.readLine();
-            int exit = process.waitFor();
-            return exit == 0 && line != null && line.contains("uid=0");
+            return line != null && line.contains("uid=0");
         } catch (Exception e) {
             return false;
         } finally {

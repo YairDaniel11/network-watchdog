@@ -92,8 +92,14 @@ public final class NetworkStatusChecker {
             // קטנה, לא גדולה - נתמך גם ב-toolbox הישן של אנדרואיד 4.4,
             // בניגוד ל--W עם אות גדולה שקיים רק בגרסאות ping מודרניות יותר).
             process = Runtime.getRuntime().exec(new String[]{"ping", "-c", "1", "-w", "3", "8.8.8.8"});
-            int exitCode = process.waitFor();
-            return exitCode == 0;
+            // תקרת זמן נוספת ברמת הקוד (לא סומכים רק על "-w 3" של ping
+            // עצמו - ROM-ים מסוימים מתעלמים מהדגל) - אותו מנגנון בטוח
+            // מפני תקיעה שמשמש גם לקריאות su (ראו RootShell).
+            RootShell.Result result = RootShell.waitForProcess(process, 5_000L);
+            if (result.timedOut) {
+                return null; // לא הצליחו לקבל תשובה חד-משמעית - נופלים ל-HTTP
+            }
+            return result.success;
         } catch (Exception e) {
             return null; // ping לא זמין/נכשל להרצה - לא מסיקים כלום, עוברים ל-HTTP
         } finally {
