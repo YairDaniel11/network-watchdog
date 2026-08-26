@@ -205,5 +205,56 @@
                 android:textColor="?attr/colorTextPrimary" />
         </RadioGroup>
 
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?attr/colorDivider"
+            android:layout_marginTop="22dp"
+            android:layout_marginBottom="22dp" />
+
+        <!-- מקטע 4: יומן אבחון - עוזר לראות בפועל מה קורה בכל בדיקה,
+             בלי מחשב/logcat. אם השורות לא מתעדכנות כל 5 דקות, סימן
+             שהבדיקה התקופתית לא רצה בכלל (בעיית מערכת/ROM) ולא בעיה
+             בלוגיקה של האפליקציה. -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/section_diagnostics"
+            android:textColor="?attr/colorTextPrimary"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:paddingBottom="6dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/diagnostics_explanation"
+            android:textColor="?attr/colorTextSecondary"
+            android:textSize="12sp"
+            android:paddingBottom="10dp" />
+
+        <TextView
+            android:id="@+id/diagnosticsLogText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textColor="?attr/colorTextSecondary"
+            android:textSize="11sp"
+            android:fontFamily="monospace"
+            android:background="?attr/colorRowBg"
+            android:padding="10dp"
+            android:layout_marginBottom="12dp" />
+
+        <Button
+            android:id="@+id/btnClearDiagnostics"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_toggle_off"
+            android:text="@string/diagnostics_clear"
+            android:textColor="@color/text_white"
+            android:textSize="14sp"
+            android:focusable="true"
+            android:focusableInTouchMode="false" />
+
     </LinearLayout>
 </ScrollView>

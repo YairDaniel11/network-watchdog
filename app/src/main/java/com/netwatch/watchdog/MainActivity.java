@@ -2,6 +2,8 @@ package com.netwatch.watchdog;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -34,24 +36,41 @@ public class MainActivity extends Activity implements View.OnClickListener {
         btnManualRefresh = (Button) findViewById(R.id.btnManualRefresh);
         manualRefreshStatusText = (TextView) findViewById(R.id.manualRefreshStatusText);
         Button btnSettings = (Button) findViewById(R.id.btnSettings);
+        TextView versionText = (TextView) findViewById(R.id.versionText);
 
         btnManualRefresh.setOnClickListener(this);
         btnSettings.setOnClickListener(this);
 
+        versionText.setText(getString(R.string.version_label, readActualVersionName()));
         checkRootStatusAsync();
+    }
+
+    /**
+     * קורא את מספר הגרסה האמיתי מתוך PackageInfo בזמן ריצה - לא מחרוזת
+     * קבועה בקוד - כך שהתצוגה תמיד תואמת בדיוק את מה שבאמת הוגדר
+     * ב-app/build.gradle (versionName) עבור ה-APK הספציפי הזה.
+     */
+    private String readActualVersionName() {
+        try {
+            PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), 0);
+            return info.versionName != null ? info.versionName : "?";
+        } catch (PackageManager.NameNotFoundException e) {
+            return "?";
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        // תיקון-עצמי: כמה מיצרני מכשירים (במיוחד ROM-ים סיניים אגרסיביים
-        // עם "מנקה זיכרון" מובנה) יכולים להרוג את האלארם החוזר מבחוץ בלי
-        // שהאפליקציה תדע, ואפילו להחזיר את האפליקציה לרשימת חיסכון
-        // הסוללה מדי פעם. כל פתיחה של המסך הראשי רושמת את האלארם מחדש
-        // (קריאה אידמפוטנטית וזולה - לא עושה כלום אם המעקב כבוי) ומריצה
-        // שוב את תיקוני הרוט ברקע אם מעקב כלשהו פעיל.
+        // תיקון-עצמי, אבל *קל בלבד*: רק רושמים מחדש את האלארם עצמו
+        // (פעולה מקומית זולה לגמרי, לא דורשת רוט/su בכלל). בגרסה קודמת
+        // הייתה כאן גם קריאה חוזרת לפקודות רוט (appops/dumpsys) בכל
+        // פתיחת מסך - זו הייתה טעות: זה גרם ל-su להיקרא כל פעם שנפתחת
+        // האפליקציה, ומנהל ה-root במכשיר מציג התראה/הודעה בכל קריאת su -
+        // בדיוק ה"הוענקו הרשאות..." שקפץ כל הזמן. תיקוני הרוט עצמם
+        // (RootPowerUtil) עכשיו רצים *פעם אחת בלבד*, כשמפעילים מעקב
+        // לראשונה - ראו SettingsActivity.
         AlarmScheduler.scheduleIfNeeded(this);
-        RootPowerUtil.applyIfAnyMonitorEnabledAsync(this);
     }
 
     @Override
@@ -103,6 +122,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
             @Override
             public void run() {
                 final boolean success = AirplaneModeToggler.toggleAirplaneModeBlocking();
+                DiagnosticsLog.log(MainActivity.this, "רענון ידני (לחיצת כפתור): " + (success ? "הצליח" : "נכשל"));
                 uiHandler.post(new Runnable() {
                     @Override
                     public void run() {

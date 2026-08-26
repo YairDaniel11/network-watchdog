@@ -37,6 +37,8 @@ public class SettingsActivity extends Activity {
     private TextView alertRestoredSoundName;
     private RadioGroup radioAlertRestoredMode;
 
+    private TextView diagnosticsLogText;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -57,6 +59,16 @@ public class SettingsActivity extends Activity {
         Button btnAlertRestoredSound = (Button) findViewById(R.id.btnAlertRestoredSound);
         alertRestoredSoundName = (TextView) findViewById(R.id.alertRestoredSoundName);
         radioAlertRestoredMode = (RadioGroup) findViewById(R.id.radioAlertRestoredMode);
+
+        diagnosticsLogText = (TextView) findViewById(R.id.diagnosticsLogText);
+        Button btnClearDiagnostics = (Button) findViewById(R.id.btnClearDiagnostics);
+        btnClearDiagnostics.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                DiagnosticsLog.clear(SettingsActivity.this);
+                refreshDiagnosticsLog();
+            }
+        });
 
         btnPhoneMonitor.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -118,9 +130,8 @@ public class SettingsActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        // אותו תיקון-עצמי כמו במסך הראשי - ראו שם.
+        // אותו תיקון-עצמי *קל* כמו במסך הראשי (רק רישום האלארם, לא רוט) - ראו שם.
         AlarmScheduler.scheduleIfNeeded(this);
-        RootPowerUtil.applyIfAnyMonitorEnabledAsync(this);
         refreshAllUi();
     }
 
@@ -162,26 +173,33 @@ public class SettingsActivity extends Activity {
 
     private void setPhoneMonitorEnabled(boolean enabled) {
         prefs.edit().putBoolean(AppPrefs.KEY_PHONE_MONITOR, enabled).apply();
-        onAnyMonitorChanged();
+        DiagnosticsLog.log(this, "מעקב רשת טלפונית -> " + (enabled ? "הופעל" : "כובה"));
+        onAnyMonitorChanged(enabled);
     }
 
     // ---------- מעקב אינטרנט ----------
 
     private void onInternetMonitorToggleClicked() {
         boolean currentlyOn = prefs.getBoolean(AppPrefs.KEY_INTERNET_MONITOR, false);
-        prefs.edit().putBoolean(AppPrefs.KEY_INTERNET_MONITOR, !currentlyOn).apply();
-        onAnyMonitorChanged();
+        boolean newState = !currentlyOn;
+        prefs.edit().putBoolean(AppPrefs.KEY_INTERNET_MONITOR, newState).apply();
+        DiagnosticsLog.log(this, "מעקב אינטרנט -> " + (newState ? "הופעל" : "כובה"));
+        onAnyMonitorChanged(newState);
     }
 
     /**
-     * נקרא בכל שינוי של אחד ממתגי המעקב. מתזמן/מבטל את האלארם, ואם
-     * *מפעילים* מעקב, גם מריץ ברקע (לא חוסם UI) את תיקוני האמינות דרך
-     * רוט (הרשאת אלארמים מדויקים + פטור מחיסכון סוללה) - ראו RootPowerUtil.
+     * נקרא בכל שינוי של אחד ממתגי המעקב. מתזמן/מבטל את האלארם (זול, לא
+     * דורש רוט) תמיד. תיקוני הרוט (RootPowerUtil - דורשים su) מופעלים
+     * *רק* כשמתג עובר ל"פעיל" (turningOn==true) - לא בכל שינוי, ובוודאי
+     * לא שוב ושוב. זה מכוון: כל קריאת su גורמת למנהל ה-root במכשיר
+     * להציג הודעה/טוסט - אז ממזערים את מספר הפעמים שבאמת קוראים לזה.
      */
-    private void onAnyMonitorChanged() {
+    private void onAnyMonitorChanged(boolean turningOn) {
         AlarmScheduler.scheduleIfNeeded(this);
         refreshMonitorButtonsUi();
-        RootPowerUtil.applyIfAnyMonitorEnabledAsync(this);
+        if (turningOn) {
+            RootPowerUtil.applyReliabilityFixesAsync(this);
+        }
     }
 
     // ---------- בחירת צליל ----------
@@ -227,6 +245,7 @@ public class SettingsActivity extends Activity {
     private void refreshAllUi() {
         refreshMonitorButtonsUi();
         refreshSoundLabels();
+        refreshDiagnosticsLog();
 
         checkAlertLostEnabled.setChecked(prefs.getBoolean(AppPrefs.KEY_ALERT_LOST_ENABLED, false));
         checkAlertRestoredEnabled.setChecked(prefs.getBoolean(AppPrefs.KEY_ALERT_RESTORED_ENABLED, false));
@@ -235,6 +254,21 @@ public class SettingsActivity extends Activity {
                 R.id.radioLostSoundVibrate, R.id.radioLostSoundOnly, R.id.radioLostVibrateOnly);
         setRadioSelection(radioAlertRestoredMode, prefs.getString(AppPrefs.KEY_ALERT_RESTORED_MODE, AppPrefs.ALERT_MODE_SOUND_VIBRATE),
                 R.id.radioRestoredSoundVibrate, R.id.radioRestoredSoundOnly, R.id.radioRestoredVibrateOnly);
+    }
+
+    private void refreshDiagnosticsLog() {
+        // מציג מהחדש לישן (הפוך מסדר האחסון) - כך שהרשומה האחרונה תמיד
+        // למעלה, בלי צורך לגלול למטה כדי לראות מה קרה עכשיו.
+        String stored = DiagnosticsLog.read(this);
+        String[] lines = stored.split("\n");
+        StringBuilder reversed = new StringBuilder();
+        for (int i = lines.length - 1; i >= 0; i--) {
+            reversed.append(lines[i]);
+            if (i > 0) {
+                reversed.append("\n");
+            }
+        }
+        diagnosticsLogText.setText(reversed.toString());
     }
 
     private void setRadioSelection(RadioGroup group, String mode, int soundVibrateId, int soundOnlyId, int vibrateOnlyId) {

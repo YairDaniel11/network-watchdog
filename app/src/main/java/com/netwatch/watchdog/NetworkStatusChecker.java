@@ -60,13 +60,56 @@ public final class NetworkStatusChecker {
     }
 
     /**
-     * בדיקת אינטרנט אמיתית - לא רק "יש רשת רשומה" אלא שיש בפועל מענה
-     * משרת. חוסמת (עד HTTP_TIMEOUT_MS) - יש לקרוא רק מ-thread ברקע.
+     * בדיקת אינטרנט אמיתית - לא רק "יש רשת רשומה" אלא שיש בפועל תגובה.
+     * חוסמת - יש לקרוא רק מ-thread ברקע.
+     *
+     * שיטה: קודם ping (שכבת IP גרידא, בלי DNS ובלי HTTPS/TLS בכלל) לכתובת
+     * IP קבועה (8.8.8.8) - *לא* דרך su, כי ping הוא אחת הפקודות המעטות
+     * שמותקנות עם הרשאת הרצה לכל אפליקציה רגילה באנדרואיד (כולל אנדרואיד
+     * 4.4 הישן). זה נבחר בכוונה במקום בדיקת HTTPS שהייתה כאן קודם: על
+     * מכשיר אנדרואיד 4.4 ישן שמדבר עם שרתי גוגל של 2026, ה-handshake של
+     * TLS עצמו יכול להיכשל (גרסאות/צירי הצפנה ישנים שגוגל כבר לא תומכת
+     * בהם) *גם כשיש אינטרנט תקין בפועל* - מה שהופך את הבדיקה הקודמת
+     * ללא-אמינה בדיוק במכשיר היעד. ping לכתובת IP עוקף את זה לגמרי.
+     * רק אם ping לא זמין בכלל (חלק מה-ROM-ים מסירים אותו) נופלים חזרה
+     * לבדיקת HTTP רגיל (לא HTTPS) מול כתובת בדיקת הקישוריות של אנדרואיד
+     * עצמו - אותה כתובת שהמערכת משתמשת בה פנימית לבדיקת captive portal,
+     * ולכן נבדקת ותומכת בכל גרסת אנדרואיד כולל הישנות ביותר.
      */
     public static boolean isInternetReachable() {
+        Boolean pingResult = tryPing();
+        if (pingResult != null) {
+            return pingResult;
+        }
+        return tryPlainHttpFallback();
+    }
+
+    /** @return true/false אם ping רץ בהצלחה ונתן תשובה חד-משמעית, null אם הפקודה עצמה לא זמינה/נכשלה להריץ. */
+    private static Boolean tryPing() {
+        Process process = null;
+        try {
+            // -c 1: חבילה אחת בלבד. -w 3: תקרת זמן כוללת של 3 שניות (אות
+            // קטנה, לא גדולה - נתמך גם ב-toolbox הישן של אנדרואיד 4.4,
+            // בניגוד ל--W עם אות גדולה שקיים רק בגרסאות ping מודרניות יותר).
+            process = Runtime.getRuntime().exec(new String[]{"ping", "-c", "1", "-w", "3", "8.8.8.8"});
+            int exitCode = process.waitFor();
+            return exitCode == 0;
+        } catch (Exception e) {
+            return null; // ping לא זמין/נכשל להרצה - לא מסיקים כלום, עוברים ל-HTTP
+        } finally {
+            if (process != null) {
+                process.destroy();
+            }
+        }
+    }
+
+    private static boolean tryPlainHttpFallback() {
         HttpURLConnection connection = null;
         try {
-            URL url = new URL("https://www.google.com/generate_204");
+            // אותה כתובת שאנדרואיד עצמו משתמש בה לבדיקת קישוריות/captive
+            // portal פנימית - HTTP רגיל (לא HTTPS), כדי לעקוף בעיות TLS
+            // אפשריות במכשיר ישן.
+            URL url = new URL("http://connectivitycheck.gstatic.com/generate_204");
             connection = (HttpURLConnection) url.openConnection();
             connection.setConnectTimeout(HTTP_TIMEOUT_MS);
             connection.setReadTimeout(HTTP_TIMEOUT_MS);

@@ -26,7 +26,19 @@
             android:textSize="22sp"
             android:textStyle="bold"
             android:gravity="center"
-            android:paddingBottom="28dp" />
+            android:paddingBottom="2dp" />
+
+        <!-- מספר הגרסה נקרא בזמן ריצה מ-PackageInfo (ראו MainActivity) -
+             לא טקסט קבוע - כך שהוא תמיד תואם את מה שבאמת נבנה. -->
+        <TextView
+            android:id="@+id/versionText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textColor="?attr/colorTextSecondary"
+            android:textSize="12sp"
+            android:gravity="center"
+            android:paddingBottom="26dp" />
 
         <!-- 1. למעלה: כפתור רענון -->
         <Button

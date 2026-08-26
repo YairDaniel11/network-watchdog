@@ -1,5 +1,11 @@
-# בונה APK דיבאג אוטומטית על כל push, ומצרף אותו כ-GitHub Release קבוע.
+# בונה APK אוטומטית על כל push, ומצרף אותו כ-GitHub Release קבוע.
 # הרצה ידנית אפשרית גם מהטאב "Actions" במאגר (workflow_dispatch), בלי push.
+#
+# מספר הגרסה (versionName) נקרא ישירות מ-app/build.gradle - זה מקור
+# האמת היחיד, גם לשם קובץ ה-APK שיוצא מכאן וגם למה שהאפליקציה עצמה
+# מציגה בתוכה (ראו MainActivity.readActualVersionName). כדי לשחרר גרסה
+# חדשה: עדכנו את versionName ב-app/build.gradle ו-push - לא צריך לגעת
+# בקובץ הזה.
 
 name: Build APK
 
@@ -31,6 +37,9 @@ jobs:
       ANDROID_CMDLINE_TOOLS_VERSION: "11076708"
       ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
       GRADLE_USER_HOME: ${{ github.workspace }}/.gradle-cache
+      # שם קבוע לקובץ ה-APK/ה-Release, לא תלוי בשפה - האפליקציה עצמה
+      # (ה-label) נשארת בעברית, זה רק שם הקובץ הטכני.
+      APP_FILE_NAME: NetworkWatchdog
 
     steps:
       - name: Checkout
@@ -59,13 +68,23 @@ jobs:
           yes | sdkmanager --licenses > /dev/null 2>&1 || true
           sdkmanager "platform-tools" "platforms;android-${ANDROID_COMPILE_SDK}" "build-tools;${ANDROID_BUILD_TOOLS}" > /dev/null
 
-      # עדכון גרסה אוטומטי - versionCode/versionName מתעדכנים למספר ההרצה
-      # של GitHub Actions לפני הבנייה, כך שכל APK מקבל גרסה עולה אוטומטית.
-      - name: Bump version (versionCode/versionName)
+      # versionCode (מספר פנימי בלבד, לא מוצג למשתמש - חייב רק לעלות בין
+      # גרסאות כדי שאנדרואיד יזהה עדכון) מקודם אוטומטית למספר הריצה.
+      # versionName (מספר הגרסה שכן מוצג למשתמש) *לא* נגעים בו כאן בכלל -
+      # הוא נשאר בדיוק מה שכתוב ב-app/build.gradle.
+      - name: Bump versionCode only
         run: |
           sed -i "s/versionCode [0-9]\+/versionCode ${{ github.run_number }}/" app/build.gradle
-          sed -i "s/versionName \"[^\"]*\"/versionName \"1.${{ github.run_number }}\"/" app/build.gradle
           grep -E "versionCode|versionName" app/build.gradle
+
+      # קוראים את versionName בפועל מתוך app/build.gradle לתוך משתנה סביבה,
+      # לשימוש בהמשך בשם הקובץ/ה-Release - כך שהם תמיד תואמים בדיוק את
+      # מה שהאפליקציה עצמה מציגה (ראו MainActivity).
+      - name: Read versionName from app/build.gradle
+        run: |
+          VERSION_NAME=$(grep -oE 'versionName\s+"[^"]+"' app/build.gradle | grep -oE '"[^"]+"' | tr -d '"')
+          echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+          echo "Detected versionName: $VERSION_NAME"
 
       # minSdk 19 (אנדרואיד 4.4 KitKat) מוגדר בקוד עצמו (app/build.gradle) -
       # ה-CI רק מקמפל, לא משנה את גרסת היעד.
@@ -74,11 +93,22 @@ jobs:
           export PATH="$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools"
           gradle assembleDebug --stacktrace --console=plain
 
+      # שינוי שם הקובץ מ-"app-debug.apk" הגנרי לשם האמיתי של האפליקציה +
+      # מספר הגרסה - זה מה שהמשתמש מקבל בפועל בהורדה (Artifact/Release).
+      - name: Rename APK to real app name + version
+        run: |
+          mkdir -p renamed-apk
+          FINAL_NAME="${APP_FILE_NAME}-v${VERSION_NAME}.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "renamed-apk/${FINAL_NAME}"
+          echo "FINAL_APK_PATH=renamed-apk/${FINAL_NAME}" >> "$GITHUB_ENV"
+          echo "FINAL_APK_NAME=${FINAL_NAME}" >> "$GITHUB_ENV"
+          ls -la renamed-apk/
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: netwatch-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: ${{ env.FINAL_APK_NAME }}
+          path: ${{ env.FINAL_APK_PATH }}
           retention-days: 30
 
       # יוצר GitHub Release קבוע רק כשהבנייה רצה בעקבות push בפועל (לא
@@ -87,10 +117,10 @@ jobs:
         if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: build-${{ github.run_number }}
-          name: "רענון רשת אוטומטי - build #${{ github.run_number }}"
+          tag_name: v${{ env.VERSION_NAME }}-build${{ github.run_number }}
+          name: "רענון רשת אוטומטי v${{ env.VERSION_NAME }}"
           body: |
-            APK דיבאג שנבנה אוטומטית מקומיט ${{ github.sha }}.
-            גרסה: versionCode ${{ github.run_number }}.
-            לא APK חתום ל-release רשמי (release חתום דורש keystore נפרד).
-          files: app/build/outputs/apk/debug/app-debug.apk
+            קובץ ההתקנה: `${{ env.FINAL_APK_NAME }}`
+            גרסה: ${{ env.VERSION_NAME }} (מקומית מ-commit ${{ github.sha }})
+            זו בניית debug לא חתומה (release חתום דורש keystore נפרד) - השם והגרסה בקובץ עדיין אמיתיים, רק סוג הבנייה עצמו לא חתום.
+          files: ${{ env.FINAL_APK_PATH }}

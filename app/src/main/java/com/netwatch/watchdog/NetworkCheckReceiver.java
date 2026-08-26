@@ -92,11 +92,29 @@ public class NetworkCheckReceiver extends BroadcastReceiver {
                 .putString(AppPrefs.KEY_LAST_NETWORK_STATE, isDown ? AppPrefs.NETWORK_STATE_DOWN : AppPrefs.NETWORK_STATE_UP)
                 .apply();
 
+        String action;
+        boolean actionOk = true;
         if (airplaneOn) {
             // כבר במצב טיסה (למשל הופעל ידנית) - רק מכבים, לא "מהבהבים".
-            AirplaneModeToggler.forceAirplaneModeOff();
+            actionOk = AirplaneModeToggler.forceAirplaneModeOff();
+            action = "מצב טיסה היה דלוק -> ניסיון כיבוי: " + (actionOk ? "הצליח" : "נכשל");
         } else if (phoneDown || internetDown) {
-            AirplaneModeToggler.toggleAirplaneModeBlocking();
+            actionOk = AirplaneModeToggler.toggleAirplaneModeBlocking();
+            action = "זוהתה נפילת רשת -> ניסיון רענון: " + (actionOk ? "הצליח" : "נכשל");
+        } else {
+            action = "אין פעולה (הכל תקין)";
         }
+
+        // רשומת יומן אבחון - זה מה שמאפשר לראות בפועל, בלי מחשב/logcat,
+        // אם הבדיקה התקופתית בכלל רצה וכל בדיקה הסיקה נכון. מקיף גם
+        // מקרה כשל: אם שורה חדשה לא מופיעה כל 5 דקות, סימן שהאלארם עצמו
+        // לא מתעורר (בעיית מערכת/ROM), לא בעיה בלוגיקה של הבדיקה.
+        DiagnosticsLog.log(context, String.format(java.util.Locale.getDefault(),
+                "בדיקה: טיסה=%s טלפון-חסר=%s אינטרנט-חסר=%s | %s",
+                yesNo(airplaneOn), yesNo(phoneDown), yesNo(internetDown), action));
+    }
+
+    private static String yesNo(boolean b) {
+        return b ? "כן" : "לא";
     }
 }
