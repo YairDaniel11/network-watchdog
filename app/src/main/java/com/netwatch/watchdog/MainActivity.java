@@ -121,7 +121,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                final boolean success = AirplaneModeToggler.toggleAirplaneModeBlocking();
+                final boolean success = AirplaneModeToggler.toggleAirplaneModeBlocking(getApplicationContext());
                 DiagnosticsLog.log(MainActivity.this, "רענון ידני (לחיצת כפתור): " + (success ? "הצליח" : "נכשל"));
                 uiHandler.post(new Runnable() {
                     @Override

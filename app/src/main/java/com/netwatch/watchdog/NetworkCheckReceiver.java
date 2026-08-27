@@ -109,33 +109,50 @@ public class NetworkCheckReceiver extends BroadcastReceiver {
         String action;
         if (airplaneOn) {
             // כבר במצב טיסה (למשל הופעל ידנית) - רק מכבים, לא "מהבהבים".
-            RootShell.Result result = AirplaneModeToggler.forceAirplaneModeOffWithDetail();
+            RootShell.Result result = AirplaneModeToggler.forceAirplaneModeOffWithDetail(context);
             action = "מצב טיסה היה דלוק -> ניסיון כיבוי: " + describe(result);
         } else if (phoneDown || internetDown) {
-            RootShell.Result result = AirplaneModeToggler.toggleAirplaneModeWithDetail();
+            RootShell.Result result = AirplaneModeToggler.toggleAirplaneModeWithDetail(context);
             action = "זוהתה נפילת רשת -> ניסיון רענון: " + describe(result);
         } else {
             action = "אין פעולה (הכל תקין)";
         }
 
         // רשומת יומן אבחון - זה מה שמאפשר לראות בפועל, בלי מחשב/logcat,
-        // אם הבדיקה התקופתית בכלל רצה וכל בדיקה הסיקה נכון.
+        // אם הבדיקה התקופתית בכלל רצה וכל בדיקה הסיקה נכון. חשוב: כל
+        // ערוץ (טלפון/אינטרנט) מציג "לא מנוטר" במפורש כשהמתג הרלוונטי
+        // כבוי - לא "לא" סתמי, כדי לא ליצור רושם מטעה שהוא נבדק ונמצא
+        // תקין כשבעצם בכלל לא נבדק (הפעלת && ב-Java מדלגת על הבדיקה
+        // עצמה כשהמתג כבוי).
         DiagnosticsLog.log(context, String.format(java.util.Locale.getDefault(),
-                "בדיקה: טיסה=%s טלפון-חסר=%s אינטרנט-חסר=%s | %s",
-                yesNo(airplaneOn), yesNo(phoneDown), yesNo(internetDown), action));
+                "בדיקה: טיסה=%s טלפון=%s אינטרנט=%s | %s",
+                yesNo(airplaneOn),
+                describeMonitor(phoneMonitor, phoneDown),
+                describeMonitor(internetMonitor, internetDown),
+                action));
+    }
+
+    private static String describeMonitor(boolean monitorEnabled, boolean down) {
+        if (!monitorEnabled) {
+            return "לא מנוטר";
+        }
+        return down ? "חסר" : "תקין";
     }
 
     private static String describe(RootShell.Result result) {
         if (result.success) {
-            return "הצליח";
+            return "הצליח (מצב טיסה בפועל: כבוי)";
         }
         if (result.timedOut) {
             // זה המידע הכי חשוב לאבחון: su עצמו לא הגיב בזמן - כנראה
             // מנהל ה-root במכשיר חוסם/משהה בקשות רקע. תוקן שלא ייתקע
             // לנצח, אבל הפעולה עצמה עדיין לא הצליחה בפועל.
-            return "נתקע בזמן (su לא הגיב - כנראה מנהל ה-root חוסם בקשות רקע)";
+            return "נתקע בזמן (su לא הגיב - כנראה מנהל ה-root חוסם בקשות רקע), מצב טיסה בפועל: עדיין דלוק";
         }
-        return "נכשל (su רץ אך החזיר שגיאה - כנראה אין הרשאות רוט מוענקות)";
+        // חשוב: זה מבוסס על המצב בפועל (Settings.Global), לא רק על קוד
+        // היציאה של ה-shell - כלומר su יכול "לחשוב" שהוא הצליח, אבל אם
+        // מצב הטיסה בפועל עדיין דלוק, זו כשלון אמיתי.
+        return "נכשל (מצב טיסה בפועל: עדיין דלוק, למרות שהרוט הגיב) - יתכן שמנהל ה-root חוסם את הפקודה בשקט";
     }
 
     private static String yesNo(boolean b) {

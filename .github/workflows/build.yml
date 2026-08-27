@@ -1,11 +1,13 @@
 # בונה APK אוטומטית על כל push, ומצרף אותו כ-GitHub Release קבוע.
 # הרצה ידנית אפשרית גם מהטאב "Actions" במאגר (workflow_dispatch), בלי push.
 #
-# מספר הגרסה (versionName) נקרא ישירות מ-app/build.gradle - זה מקור
-# האמת היחיד, גם לשם קובץ ה-APK שיוצא מכאן וגם למה שהאפליקציה עצמה
-# מציגה בתוכה (ראו MainActivity.readActualVersionName). כדי לשחרר גרסה
-# חדשה: עדכנו את versionName ב-app/build.gradle ו-push - לא צריך לגעת
-# בקובץ הזה.
+# מספר הגרסה (versionName) מחושב כאן *אוטומטית לגמרי* מתוך מספר הריצה
+# של GitHub Actions (github.run_number) - לא נקרא יותר מ-app/build.gradle
+# ולא דורש שום עריכה ידנית בשום קובץ בשביל להתעדכן. בגרסה קודמת
+# versionName נקרא סטטית מ-app/build.gradle, מה שדרש עדכון ידני בכל
+# שחרור - ונשכח כמה פעמים ברציפות (הגרסה נשארה תקועה על "1.4" למרות
+# כמה סבבי תיקונים). הפתרון: מספר הריצה של GitHub עצמו תמיד עולה ותמיד
+# ידוע במדויק - אין שום דבר לשכוח לעדכן.
 
 name: Build APK
 
@@ -40,6 +42,9 @@ jobs:
       # שם קבוע לקובץ ה-APK/ה-Release, לא תלוי בשפה - האפליקציה עצמה
       # (ה-label) נשארת בעברית, זה רק שם הקובץ הטכני.
       APP_FILE_NAME: NetworkWatchdog
+      # ה"1." הזה הוא ה-major version היחיד שנקבע ידנית (רק אם ירצו
+      # לקפוץ יום אחד ל-"2.x" בשינוי גדול) - כל שאר המספר אוטומטי לגמרי.
+      VERSION_MAJOR: "1"
 
     steps:
       - name: Checkout
@@ -68,23 +73,16 @@ jobs:
           yes | sdkmanager --licenses > /dev/null 2>&1 || true
           sdkmanager "platform-tools" "platforms;android-${ANDROID_COMPILE_SDK}" "build-tools;${ANDROID_BUILD_TOOLS}" > /dev/null
 
-      # versionCode (מספר פנימי בלבד, לא מוצג למשתמש - חייב רק לעלות בין
-      # גרסאות כדי שאנדרואיד יזהה עדכון) מקודם אוטומטית למספר הריצה.
-      # versionName (מספר הגרסה שכן מוצג למשתמש) *לא* נגעים בו כאן בכלל -
-      # הוא נשאר בדיוק מה שכתוב ב-app/build.gradle.
-      - name: Bump versionCode only
+      # גם versionCode וגם versionName מחושבים כאן, ישירות ממספר הריצה -
+      # אין קריאה מ-app/build.gradle ואין עריכה ידנית בשום מקום. הפלט,
+      # לדוגמה בריצה מספר 42: versionCode=42, versionName="1.42".
+      - name: Compute and set version (fully automatic)
         run: |
+          VERSION_NAME="${VERSION_MAJOR}.${{ github.run_number }}"
           sed -i "s/versionCode [0-9]\+/versionCode ${{ github.run_number }}/" app/build.gradle
-          grep -E "versionCode|versionName" app/build.gradle
-
-      # קוראים את versionName בפועל מתוך app/build.gradle לתוך משתנה סביבה,
-      # לשימוש בהמשך בשם הקובץ/ה-Release - כך שהם תמיד תואמים בדיוק את
-      # מה שהאפליקציה עצמה מציגה (ראו MainActivity).
-      - name: Read versionName from app/build.gradle
-        run: |
-          VERSION_NAME=$(grep -oE 'versionName\s+"[^"]+"' app/build.gradle | grep -oE '"[^"]+"' | tr -d '"')
+          sed -i "s/versionName \"[^\"]*\"/versionName \"${VERSION_NAME}\"/" app/build.gradle
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
-          echo "Detected versionName: $VERSION_NAME"
+          grep -E "versionCode|versionName" app/build.gradle
 
       # minSdk 19 (אנדרואיד 4.4 KitKat) מוגדר בקוד עצמו (app/build.gradle) -
       # ה-CI רק מקמפל, לא משנה את גרסת היעד.

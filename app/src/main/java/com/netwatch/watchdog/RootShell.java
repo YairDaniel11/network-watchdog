@@ -27,7 +27,7 @@ public final class RootShell {
         public final boolean success;
         public final boolean timedOut;
 
-        private Result(boolean success, boolean timedOut) {
+        Result(boolean success, boolean timedOut) {
             this.success = success;
             this.timedOut = timedOut;
         }
