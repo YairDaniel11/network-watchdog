@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">רענון רשת אוטומטי</string>
-    <!-- %s מוחלף בזמן ריצה במספר הגרסה האמיתי (PackageInfo.versionName) - ראו MainActivity. -->
-    <string name="version_label">גרסה %s</string>
 
     <!-- מסך ראשי -->
     <string name="manual_refresh_button">רענן רשת עכשיו</string>
@@ -24,8 +22,13 @@
     <string name="internet_monitor_title">מעקב אינטרנט</string>
     <string name="monitor_on">פעיל</string>
     <string name="monitor_off">כבוי</string>
-    <string name="monitor_explanation">כשמופעל: בודק כל 5 דקות אם יש רשת, ורק אם אין - מרענן אוטומטית. גם אם הועבר המכשיר למצב טיסה ידנית, המעקב יוציא אותו ממנו.</string>
+    <string name="monitor_explanation">כשמופעל: בודק בקצב שנבחר למטה אם יש רשת, ורק אם אין - מרענן אוטומטית. גם אם הועבר המכשיר למצב טיסה ידנית, המעקב יוציא אותו ממנו.</string>
     <string name="phone_permission_needed">כדי להפעיל מעקב רשת טלפונית, האפליקציה צריכה הרשאה לקרוא את מצב הטלפון</string>
+
+    <string name="section_interval">קצב הבדיקה</string>
+    <string name="interval_one_minute">כל דקה</string>
+    <string name="interval_minutes_format">כל %d דקות</string>
+    <string name="interval_one_hour">כל שעה</string>
 
     <string name="section_alert_lost">התרעה כשאין קליטה</string>
     <string name="section_alert_restored">התרעה כשחוזרת הקליטה</string>
@@ -37,6 +40,6 @@
     <string name="alert_mode_vibrate_only">רטט בלבד</string>
 
     <string name="section_diagnostics">יומן אבחון</string>
-    <string name="diagnostics_explanation">רשומות של הבדיקות האחרונות - אם אין שורה חדשה כל 5 דקות, סימן שהבדיקה התקופתית לא רצה בכלל.</string>
+    <string name="diagnostics_explanation">רשומות של הבדיקות האחרונות - אם אין שורה חדשה בקצב שנבחר, סימן שהבדיקה התקופתית לא רצה בכלל.</string>
     <string name="diagnostics_clear">נקה יומן</string>
 </resources>

@@ -2,8 +2,6 @@ package com.netwatch.watchdog;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -36,27 +34,11 @@ public class MainActivity extends Activity implements View.OnClickListener {
         btnManualRefresh = (Button) findViewById(R.id.btnManualRefresh);
         manualRefreshStatusText = (TextView) findViewById(R.id.manualRefreshStatusText);
         Button btnSettings = (Button) findViewById(R.id.btnSettings);
-        TextView versionText = (TextView) findViewById(R.id.versionText);
 
         btnManualRefresh.setOnClickListener(this);
         btnSettings.setOnClickListener(this);
 
-        versionText.setText(getString(R.string.version_label, readActualVersionName()));
         checkRootStatusAsync();
-    }
-
-    /**
-     * קורא את מספר הגרסה האמיתי מתוך PackageInfo בזמן ריצה - לא מחרוזת
-     * קבועה בקוד - כך שהתצוגה תמיד תואמת בדיוק את מה שבאמת הוגדר
-     * ב-app/build.gradle (versionName) עבור ה-APK הספציפי הזה.
-     */
-    private String readActualVersionName() {
-        try {
-            PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), 0);
-            return info.versionName != null ? info.versionName : "?";
-        } catch (PackageManager.NameNotFoundException e) {
-            return "?";
-        }
     }
 
     @Override
@@ -121,7 +103,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                final boolean success = AirplaneModeToggler.toggleAirplaneModeBlocking();
+                final boolean success = AirplaneModeToggler.toggleAirplaneModeBlocking(getApplicationContext());
                 DiagnosticsLog.log(MainActivity.this, "רענון ידני (לחיצת כפתור): " + (success ? "הצליח" : "נכשל"));
                 uiHandler.post(new Runnable() {
                     @Override

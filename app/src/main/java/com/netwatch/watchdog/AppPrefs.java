@@ -17,6 +17,10 @@ public final class AppPrefs {
     /** האם מעקב אינטרנט (בדיקת מענה בפועל משרת) פעיל. */
     public static final String KEY_INTERNET_MONITOR = "internet_monitor_enabled";
 
+    /** קצב הבדיקה התקופתית, בדקות - ניתן לבחירה במסך ההגדרות (ראו SettingsActivity). */
+    public static final String KEY_CHECK_INTERVAL_MINUTES = "check_interval_minutes";
+    public static final int DEFAULT_CHECK_INTERVAL_MINUTES = 5;
+
     // --- התרעות קוליות/רטט ---
 
     /** האם להתריע כשמתגלה שאין קליטה. */

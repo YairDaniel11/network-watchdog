@@ -64,6 +64,32 @@
             android:layout_marginTop="22dp"
             android:layout_marginBottom="22dp" />
 
+        <!-- מקטע חדש: קצב הבדיקה - כפתורי הרדיו עצמם נוצרים בקוד
+             (MainActivity/SettingsActivity) לפי AlarmScheduler.INTERVAL_OPTIONS_MINUTES,
+             כדי שלא יהיו שני מקורות אמת (XML קבוע מול המערך בקוד) - כאן
+             רק ה-RadioGroup הריק שמתמלא בזמן ריצה. -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/section_interval"
+            android:textColor="?attr/colorTextPrimary"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:paddingBottom="10dp" />
+
+        <RadioGroup
+            android:id="@+id/radioInterval"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?attr/colorDivider"
+            android:layout_marginTop="22dp"
+            android:layout_marginBottom="22dp" />
+
         <!-- מקטע 2: התרעה כשאין קליטה -->
         <TextView
             android:layout_width="match_parent"
@@ -212,10 +238,10 @@
             android:layout_marginTop="22dp"
             android:layout_marginBottom="22dp" />
 
-        <!-- מקטע 4: יומן אבחון - עוזר לראות בפועל מה קורה בכל בדיקה,
-             בלי מחשב/logcat. אם השורות לא מתעדכנות כל 5 דקות, סימן
-             שהבדיקה התקופתית לא רצה בכלל (בעיית מערכת/ROM) ולא בעיה
-             בלוגיקה של האפליקציה. -->
+        <!-- מקטע אחרון: יומן אבחון - עוזר לראות בפועל מה קורה בכל בדיקה,
+             בלי מחשב/logcat. אם השורות לא מתעדכנות בקצב שנבחר למעלה,
+             סימן שהבדיקה התקופתית לא רצה בכלל (בעיית מערכת/ROM) ולא
+             בעיה בלוגיקה של האפליקציה. -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

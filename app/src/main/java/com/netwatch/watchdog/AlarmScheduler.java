@@ -8,9 +8,9 @@ import android.content.SharedPreferences;
 import android.os.SystemClock;
 
 /**
- * מתזמן/מבטל את הבדיקה החוזרת כל 5 דקות, דרך AlarmManager + BroadcastReceiver
- * (NetworkCheckReceiver) - במכוון *לא* Service שרץ ברצף ברקע, כדי לצרוך
- * כמה שפחות RAM וסוללה.
+ * מתזמן/מבטל את הבדיקה החוזרת (קצב לבחירת המשתמש - ראו INTERVAL_OPTIONS_MINUTES
+ * ומסך ההגדרות), דרך AlarmManager + BroadcastReceiver (NetworkCheckReceiver) -
+ * במכוון *לא* Service שרץ ברצף ברקע, כדי לצרוך כמה שפחות RAM וסוללה.
  *
  * ------------------------------------------------------------------
  * הערה חשובה (תוקן אחרי דיווח על אי-אמינות): בגרסה הקודמת השתמשתי
@@ -37,8 +37,30 @@ public final class AlarmScheduler {
     private AlarmScheduler() {
     }
 
-    public static final long INTERVAL_MS = 5 * 60 * 1000L; // 5 דקות
     private static final int REQUEST_CODE = 1001;
+
+    /** אפשרויות קצב הבדיקה שהמשתמש יכול לבחור במסך ההגדרות (בדקות). */
+    public static final int[] INTERVAL_OPTIONS_MINUTES = {1, 5, 10, 15, 30, 60};
+
+    public static int getIntervalMinutes(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(AppPrefs.PREFS_NAME, Context.MODE_PRIVATE);
+        return prefs.getInt(AppPrefs.KEY_CHECK_INTERVAL_MINUTES, AppPrefs.DEFAULT_CHECK_INTERVAL_MINUTES);
+    }
+
+    /**
+     * שומר קצב בדיקה חדש ורושם מחדש את האלארם החוזר איתו מייד (אם מעקב
+     * כלשהו פעיל) - אלארם חוזר לא "משנה קצב" מעצמו; צריך לבטל ולרשום
+     * מחדש כדי שהקצב החדש ייכנס לתוקף מהבדיקה הבאה.
+     */
+    public static void setIntervalMinutes(Context context, int minutes) {
+        SharedPreferences prefs = context.getSharedPreferences(AppPrefs.PREFS_NAME, Context.MODE_PRIVATE);
+        prefs.edit().putInt(AppPrefs.KEY_CHECK_INTERVAL_MINUTES, minutes).apply();
+        // מבטלים במפורש לפני רישום מחדש (במקום לסמוך רק על FLAG_UPDATE_CURRENT
+        // "לדרוס" את הקודם) - כדי להימנע ממצב קצה שבו ROM מסוים משאיר את
+        // האלארם הישן רשום עם הקצב הישן לצד החדש.
+        cancel(context);
+        scheduleIfNeeded(context);
+    }
 
     /**
      * קוראים לזה בכל שינוי של אחד ממתגי המעקב, ב-BootReceiver, וגם בכל
@@ -62,14 +84,15 @@ public final class AlarmScheduler {
         if (am == null) {
             return;
         }
-        long firstTriggerAt = SystemClock.elapsedRealtime() + INTERVAL_MS;
+        long intervalMs = getIntervalMinutes(context) * 60_000L;
+        long firstTriggerAt = SystemClock.elapsedRealtime() + intervalMs;
         // setInexactRepeating (לא setRepeating) בכוונה: מ-API 19 ואילך שתי
         // הפונקציות מתנהגות זהה בפועל (כל אלארם חוזר הוא "לא מדויק" משיקולי
         // סוללה, גם אם קוראים ל-setRepeating) - השם "Inexact" רק משקף את זה
         // בצורה כנה יותר בקוד. הקריאה הזו אידמפוטנטית - קריאה חוזרת (למשל
         // מ-onResume בכל פתיחת מסך) רק מעדכנת/מוודאת את אותו אלארם, לא
         // יוצרת כפילות.
-        am.setInexactRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP, firstTriggerAt, INTERVAL_MS, pendingIntent(context));
+        am.setInexactRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP, firstTriggerAt, intervalMs, pendingIntent(context));
     }
 
     private static void cancel(Context context) {

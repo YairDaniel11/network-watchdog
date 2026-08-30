@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -28,6 +29,10 @@ public class SettingsActivity extends Activity {
 
     private Button btnPhoneMonitor;
     private Button btnInternetMonitor;
+
+    private RadioGroup radioInterval;
+    /** ממופה minutes -> ה-RadioButton המתאים, כדי לבחור/לקרוא בקלות. */
+    private final java.util.Map<Integer, RadioButton> intervalButtons = new java.util.HashMap<Integer, RadioButton>();
 
     private CheckBox checkAlertLostEnabled;
     private TextView alertLostSoundName;
@@ -49,6 +54,9 @@ public class SettingsActivity extends Activity {
 
         btnPhoneMonitor = (Button) findViewById(R.id.btnPhoneMonitor);
         btnInternetMonitor = (Button) findViewById(R.id.btnInternetMonitor);
+
+        radioInterval = (RadioGroup) findViewById(R.id.radioInterval);
+        buildIntervalOptions();
 
         checkAlertLostEnabled = (CheckBox) findViewById(R.id.checkAlertLostEnabled);
         Button btnAlertLostSound = (Button) findViewById(R.id.btnAlertLostSound);
@@ -142,6 +150,65 @@ public class SettingsActivity extends Activity {
             return AppPrefs.ALERT_MODE_VIBRATE_ONLY;
         }
         return AppPrefs.ALERT_MODE_SOUND_VIBRATE;
+    }
+
+    // ---------- קצב הבדיקה ----------
+
+    /**
+     * בונה את כפתורי הרדיו של קצב הבדיקה בקוד (לא ב-XML) לפי
+     * AlarmScheduler.INTERVAL_OPTIONS_MINUTES - כך שיש מקור אמת יחיד
+     * לרשימת האפשרויות, ולא צריך לשמור אותה מסונכרנת בשני מקומות.
+     */
+    private void buildIntervalOptions() {
+        int textColor = resolveThemeColor(R.attr.colorTextPrimary);
+        for (final int minutes : AlarmScheduler.INTERVAL_OPTIONS_MINUTES) {
+            RadioButton button = new RadioButton(this);
+            button.setId(View.generateViewId());
+            button.setText(intervalLabel(minutes));
+            button.setTextColor(textColor);
+            button.setTag(minutes);
+            radioInterval.addView(button);
+            intervalButtons.put(minutes, button);
+        }
+        radioInterval.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup group, int checkedId) {
+                View selected = group.findViewById(checkedId);
+                if (selected == null || selected.getTag() == null) {
+                    return;
+                }
+                int minutes = (Integer) selected.getTag();
+                if (minutes == AlarmScheduler.getIntervalMinutes(SettingsActivity.this)) {
+                    return; // לא באמת השתנה (למשל בחירה תוכנתית בזמן refreshAllUi)
+                }
+                AlarmScheduler.setIntervalMinutes(SettingsActivity.this, minutes);
+                DiagnosticsLog.log(SettingsActivity.this, "קצב הבדיקה שונה ל" + intervalLabel(minutes));
+            }
+        });
+    }
+
+    private String intervalLabel(int minutes) {
+        if (minutes == 1) {
+            return getString(R.string.interval_one_minute);
+        }
+        if (minutes == 60) {
+            return getString(R.string.interval_one_hour);
+        }
+        return String.format(java.util.Locale.getDefault(), getString(R.string.interval_minutes_format), minutes);
+    }
+
+    private void refreshIntervalSelection() {
+        int currentMinutes = AlarmScheduler.getIntervalMinutes(this);
+        RadioButton match = intervalButtons.get(currentMinutes);
+        if (match != null && !match.isChecked()) {
+            match.setChecked(true);
+        }
+    }
+
+    private int resolveThemeColor(int attrResId) {
+        android.util.TypedValue typedValue = new android.util.TypedValue();
+        getTheme().resolveAttribute(attrResId, typedValue, true);
+        return typedValue.data;
     }
 
     // ---------- מעקב רשת טלפונית ----------
@@ -244,6 +311,7 @@ public class SettingsActivity extends Activity {
 
     private void refreshAllUi() {
         refreshMonitorButtonsUi();
+        refreshIntervalSelection();
         refreshSoundLabels();
         refreshDiagnosticsLog();
 

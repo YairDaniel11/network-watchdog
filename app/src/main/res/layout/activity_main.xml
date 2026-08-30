@@ -1,92 +1,91 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- עטוף ב-ScrollView + fillViewport (בדיוק כמו שהיה במבנה של האפליקציה
-     הראשונית שממנה למדנו) - כך שגם במסכים קטנים מאוד (מכשיר מקשים) אף
-     כפתור לא "נחתך" מבלי אפשרות לגלול אליו. -->
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- מבנה בשתי שכבות: אזור גלילה (הכל חוץ מכפתור ההגדרות) + כפתור
+     ההגדרות מחוץ ל-ScrollView, צמוד תמיד לתחתית המסך (layout_weight=1
+     על ה-ScrollView דוחף את שאר החלל אליו) - כך שהוא תמיד נגיש בלי
+     צורך לגלול, גם במסך קטן מאוד. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
+    android:orientation="vertical"
     android:background="?attr/colorBgMain">
 
-    <LinearLayout
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingLeft="20dp"
-        android:paddingRight="20dp"
-        android:paddingTop="20dp"
-        android:paddingBottom="20dp">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
 
-        <TextView
-            android:id="@+id/headerTitle"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/app_name"
-            android:textColor="?attr/colorTextPrimary"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:paddingBottom="2dp" />
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingLeft="20dp"
+            android:paddingRight="20dp"
+            android:paddingTop="20dp"
+            android:paddingBottom="16dp">
 
-        <!-- מספר הגרסה נקרא בזמן ריצה מ-PackageInfo (ראו MainActivity) -
-             לא טקסט קבוע - כך שהוא תמיד תואם את מה שבאמת נבנה. -->
-        <TextView
-            android:id="@+id/versionText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text=""
-            android:textColor="?attr/colorTextSecondary"
-            android:textSize="12sp"
-            android:gravity="center"
-            android:paddingBottom="26dp" />
+            <TextView
+                android:id="@+id/headerTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/app_name"
+                android:textColor="?attr/colorTextPrimary"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:paddingBottom="28dp" />
 
-        <!-- 1. למעלה: כפתור רענון -->
-        <Button
-            android:id="@+id/btnManualRefresh"
-            android:layout_width="match_parent"
-            android:layout_height="76dp"
-            android:background="@drawable/bg_button_primary"
-            android:text="@string/manual_refresh_button"
-            android:textColor="@color/text_white"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:focusable="true"
-            android:focusableInTouchMode="false" />
+            <!-- כפתור הרענון ממורכז (לא נמתח לרוחב המסך כמו קודם) -->
+            <Button
+                android:id="@+id/btnManualRefresh"
+                android:layout_width="240dp"
+                android:layout_height="76dp"
+                android:layout_gravity="center_horizontal"
+                android:background="@drawable/bg_button_primary"
+                android:text="@string/manual_refresh_button"
+                android:textColor="@color/text_white"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:focusable="true"
+                android:focusableInTouchMode="false" />
 
-        <TextView
-            android:id="@+id/manualRefreshStatusText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text=""
-            android:textColor="?attr/colorTextSecondary"
-            android:textSize="13sp"
-            android:gravity="center"
-            android:paddingTop="8dp"
-            android:paddingBottom="24dp" />
+            <TextView
+                android:id="@+id/manualRefreshStatusText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textColor="?attr/colorTextSecondary"
+                android:textSize="13sp"
+                android:gravity="center"
+                android:paddingTop="8dp"
+                android:paddingBottom="24dp" />
 
-        <!-- 2. באמצע, צמוד לכפתור ההגדרות: שורת סטטוס רוט -->
-        <TextView
-            android:id="@+id/rootStatusText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/root_status_checking"
-            android:textColor="?attr/colorTextSecondary"
-            android:textSize="14sp"
-            android:gravity="center"
-            android:paddingBottom="10dp" />
+            <TextView
+                android:id="@+id/rootStatusText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/root_status_checking"
+                android:textColor="?attr/colorTextSecondary"
+                android:textSize="14sp"
+                android:gravity="center" />
 
-        <!-- 3. למטה: כפתור הגדרות -->
-        <Button
-            android:id="@+id/btnSettings"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:background="@drawable/bg_toggle_off"
-            android:text="@string/settings_button"
-            android:textColor="@color/text_white"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:focusable="true"
-            android:focusableInTouchMode="false" />
+        </LinearLayout>
+    </ScrollView>
 
-    </LinearLayout>
-</ScrollView>
+    <!-- כפתור הגדרות - מחוץ ל-ScrollView, צמוד תמיד לתחתית המסך -->
+    <Button
+        android:id="@+id/btnSettings"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_margin="20dp"
+        android:layout_marginTop="6dp"
+        android:background="@drawable/bg_toggle_off"
+        android:text="@string/settings_button"
+        android:textColor="@color/text_white"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:focusable="true"
+        android:focusableInTouchMode="false" />
+
+</LinearLayout>
